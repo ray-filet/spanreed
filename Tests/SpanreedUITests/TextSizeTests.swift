@@ -47,6 +47,10 @@ final class TextSizeTests: XCTestCase {
         XCTAssertTrue(application.menuItems["Decrease Text Size"].exists)
         XCTAssertTrue(application.menuItems["Reset Text Size"].exists)
         application.typeKey(.escape, modifierFlags: [])
+        let dismissedMenu = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            !self.application.menuItems["Increase Text Size"].isHittable
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissedMenu], timeout: 3), .completed)
 
         application.typeKey("=", modifierFlags: [.command, .shift])
         XCTAssertGreaterThan(untitledEditor.frame.height, defaultHeight)
@@ -61,6 +65,12 @@ final class TextSizeTests: XCTestCase {
         application.typeKey("0", modifierFlags: .command)
         XCTAssertEqual(homeEditor.frame.height, defaultHeight, accuracy: 1)
         XCTAssertEqual(untitledEditor.frame.height, defaultHeight, accuracy: 1)
+
+        application.typeKey("=", modifierFlags: .command)
+        XCTAssertGreaterThan(homeEditor.frame.height, defaultHeight)
+        XCTAssertEqual(homeEditor.frame.height, untitledEditor.frame.height, accuracy: 1)
+        application.typeKey("0", modifierFlags: .command)
+        XCTAssertEqual(homeEditor.frame.height, defaultHeight, accuracy: 1)
     }
 
     func testZoomAndResetAreRememberedAcrossLaunches() throws {
