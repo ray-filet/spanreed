@@ -46,9 +46,14 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
         window.minSize = NSSize(width: 360, height: 240)
         window.isRestorable = false
         window.tabbingMode = .disallowed
+        window.styleMask.insert(.fullSizeContentView)
+        window.titlebarAppearsTransparent = true
+        window.backgroundColor = .textBackgroundColor
+        window.titlebarSeparatorStyle = .none
         window.center()
-        let scrollView = NSScrollView(frame: window.contentView!.bounds)
-        scrollView.autoresizingMask = [.width, .height]
+        window.contentView = NoteBackgroundView(frame: window.contentView!.bounds)
+        let scrollView = NSScrollView(frame: window.contentLayoutRect)
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         let textView = NSTextView(frame: scrollView.contentView.bounds)
@@ -77,6 +82,13 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
         textView.setAccessibilityIdentifier("note-editor")
         scrollView.documentView = textView
         window.contentView?.addSubview(scrollView)
+        let contentLayoutGuide = window.contentLayoutGuide as! NSLayoutGuide
+        NSLayoutConstraint.activate([
+            scrollView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor),
+            scrollView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor)
+        ])
         editor = textView
         addWindowController(NoteWindowController(window: window, defaults: AppPaths.current.defaults,
                                                  restoreHomeFrame: kind == .home))
@@ -209,5 +221,19 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
         menu.addItem(.separator())
         menu.addItem(font)
         return menu
+    }
+}
+
+private final class NoteBackgroundView: NSView {
+    override var isOpaque: Bool { true }
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.textBackgroundColor.setFill()
+        dirtyRect.fill()
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
     }
 }
