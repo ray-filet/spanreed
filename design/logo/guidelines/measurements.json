@@ -1,0 +1,378 @@
+{
+ "rules": {
+  "caret_min_mm": 0.35,
+  "hairline_min_mm": 0.15,
+  "note": "print minimum = the larger of the sizes at which the light gap reaches caret_min_mm and the wordmark hairline reaches hairline_min_mm, rounded up to a whole mm; the wordmark alone uses the shared spec's figure (same rule, cap height rounded up to 0.1 mm)"
+ },
+ "wordmark_at_font_size_200": {
+  "ink_width": 787.11,
+  "cap_height": 137.0,
+  "x_height": 91.07,
+  "hairline_measured": 7.4
+ },
+ "horizontal": {
+  "file": "spanreed-door-ajar-horizontal{,-color,-white,-color-dark}.svg",
+  "viewBox": [
+   984.0,
+   226.0
+  ],
+  "door_w": 121.04,
+  "door_h": 195.22,
+  "caret": 13.66,
+  "knob": 16.18,
+  "R": 60.52,
+  "door_ink": [
+   15.23,
+   15.39,
+   136.27,
+   210.61
+  ],
+  "word_ink": [
+   181.65,
+   17.71,
+   968.77,
+   210.61
+  ],
+  "cap": 137.0,
+  "x_height": 91.07,
+  "hairline": 7.4
+ },
+ "horizontal_small": {
+  "file": "spanreed-door-ajar-horizontal-small{,-color,-white,-color-dark}.svg",
+  "viewBox": [
+   991.0,
+   227.0
+  ],
+  "door_w": 124.94,
+  "door_h": 195.22,
+  "caret": 31.24,
+  "knob": 18.74,
+  "R": 62.47,
+  "door_ink": [
+   16.05,
+   15.89,
+   140.99,
+   211.11
+  ],
+  "word_ink": [
+   187.84,
+   18.21,
+   974.95,
+   211.11
+  ],
+  "cap": 137.0,
+  "x_height": 91.07,
+  "hairline": 7.4
+ },
+ "stacked": {
+  "file": "spanreed-door-ajar-stacked{,-color,-white,-color-dark}.svg",
+  "viewBox": [
+   843.0,
+   659.0
+  ],
+  "door_w": 219.6,
+  "door_h": 354.2,
+  "caret": 24.79,
+  "knob": 29.09,
+  "R": 109.8,
+  "door_ink": [
+   311.7,
+   27.6,
+   531.3,
+   381.8
+  ],
+  "word_ink": [
+   27.94,
+   438.5,
+   815.06,
+   631.4
+  ],
+  "cap": 137.0,
+  "x_height": 91.07,
+  "hairline": 7.4
+ },
+ "symbol_only": {
+  "file": "spanreed-door-ajar-symbol-only{,-color,-white,-color-dark}.svg",
+  "viewBox": [
+   155.0,
+   231.0
+  ],
+  "door_w": 124.0,
+  "door_h": 200.0,
+  "caret": 14.0,
+  "knob": 16.0,
+  "R": 62.0,
+  "door_ink": [
+   15.5,
+   15.5,
+   139.5,
+   215.5
+  ]
+ },
+ "wordmark": {
+  "file": "spanreed-door-ajar-wordmark{,-color,-white,-color-dark}.svg",
+  "viewBox": [
+   820.0,
+   225.0
+  ],
+  "word_ink": [
+   16.44,
+   16.05,
+   803.56,
+   208.95
+  ],
+  "cap": 137.0,
+  "x_height": 91.07,
+  "hairline": 7.4
+ },
+ "symbol": {
+  "file": "spanreed-door-ajar-symbol{,-color,-color-dark,-reversed}.svg",
+  "viewBox": [
+   256.0,
+   256.0
+  ],
+  "door_w": 124.0,
+  "door_h": 200.0,
+  "caret": 14.0,
+  "knob": 16.0,
+  "R": 62.0,
+  "door_ink": [
+   66.0,
+   24.0,
+   190.0,
+   224.0
+  ]
+ },
+ "symbol_small": {
+  "file": "spanreed-door-ajar-symbol-small{,-reversed,-color,-color-dark}.svg",
+  "viewBox": [
+   256,
+   256
+  ],
+  "door_w": 128,
+  "door_h": 200,
+  "caret": 32,
+  "jamb": 16,
+  "knob": 19.2,
+  "px_at_16": {
+   "door": 8.0,
+   "caret": 2.0,
+   "jamb": 1.0,
+   "knob": 1.2
+  },
+  "note": "every vertical edge, the floor and the knob centre on the 16-unit grid (pixel-exact at 16 and 32 px); the reversed file is not thinned for that reason"
+ },
+ "symbol_favicon": {
+  "file": "spanreed-door-ajar-symbol-favicon.svg",
+  "viewBox": [
+   256,
+   256
+  ],
+  "door_w": 160,
+  "door_h": 240,
+  "caret": 32,
+  "knob": 19.2,
+  "crown_y": 0,
+  "floor_y": 240,
+  "px_at_16": {
+   "caret": 2.0,
+   "jamb": 2.0,
+   "knob": 1.2,
+   "floor_row": 15.0
+  }
+ },
+ "favicon_tile": {
+  "file": "spanreed-door-ajar-favicon-tile.svg",
+  "viewBox": [
+   256,
+   256
+  ],
+  "door": "the small cut",
+  "used_for": "exports/symbol/favicon.ico and favicon-16/32/48.png"
+ },
+ "app_icon": {
+  "file": "app-icon/AppIcon-1024.svg (+ AppIcon-small.svg for 16-32 px)",
+  "tile": 824,
+  "canvas": 1024,
+  "caret_px_at_1024": 40.32,
+  "door_scale": 0.72
+ },
+ "app_icon_lockup": {
+  "file": "spanreed-door-ajar-app-icon-lockup{,-white}.svg",
+  "viewBox": [
+   1238.0,
+   369.0
+  ],
+  "tile": 328.8,
+  "caret": 16.09,
+  "cap": 137.0,
+  "x_height": 91.07,
+  "hairline": 7.4
+ },
+ "minimums": {
+  "horizontal": {
+   "screen_px_tall": 32,
+   "screen_px_wide": 139,
+   "caret_px_at_min": 1.93,
+   "print_mm_wide": 26,
+   "print_mm_tall_at_that": 6.0,
+   "exact_print_min": [
+    5.79,
+    25.21
+   ]
+  },
+  "horizontal_small": {
+   "screen_px_tall": [
+    14,
+    32
+   ],
+   "screen_px_wide": [
+    61,
+    140
+   ],
+   "caret_px_at_14": 1.93,
+   "print_mm_wide": 21,
+   "exact_print_min": [
+    4.6,
+    20.09
+   ]
+  },
+  "stacked": {
+   "screen_px_tall": 48,
+   "screen_px_wide": 61,
+   "print_mm_tall": 14,
+   "print_mm_wide_at_that": 17.9,
+   "exact_print_min": [
+    13.36,
+    17.09
+   ]
+  },
+  "symbol": {
+   "screen_px": 32,
+   "print_mm_tall": 6,
+   "exact_print_min": [
+    5.77,
+    3.87
+   ],
+   "note": "symbol-only file height (viewBox 155 x 231)"
+  },
+  "symbol_square": {
+   "screen_px": 32,
+   "print_mm_tall": 7,
+   "exact_print_min": 6.4,
+   "note": "square -symbol masters (viewBox 256 x 256): square side"
+  },
+  "symbol_small": {
+   "screen_px": [
+    16,
+    32
+   ],
+   "print_mm_door_tall": 3,
+   "exact_door_mm": 2.19
+  },
+  "symbol_favicon": {
+   "screen_px": [
+    16,
+    32,
+    48
+   ]
+  },
+  "wordmark": {
+   "screen_cap_px": 8,
+   "screen_ink_px_wide": 46,
+   "screen_file_px": [
+    48,
+    13
+   ],
+   "screen_text": "cap height 8 px: ink 46 px wide (file 48 \u00d7 13 px)",
+   "exact_ink_px_wide": 45.96,
+   "print_cap_mm": 2.8,
+   "print_ink_mm_wide": 16.1,
+   "print_file_mm": [
+    16.8,
+    4.6
+   ],
+   "print_text": "cap height 2.8 mm: ink 16.1 mm wide (file 16.8 \u00d7 4.6 mm)",
+   "exact_print_cap_mm": 2.777,
+   "exact_print_min_file": [
+    4.56,
+    16.62
+   ],
+   "source": "kit/shared/wordmark/wordmark-spec.json recommended (screen and print)"
+  },
+  "app_icon": {
+   "screen_px": 16,
+   "small_cut_px": [
+    16,
+    32
+   ],
+   "print_mm_tile": 8,
+   "exact_tile_mm": 7.15
+  },
+  "app_icon_lockup": {
+   "screen_px_tall": 72,
+   "screen_px_wide": 242,
+   "print_mm_wide": 27,
+   "exact_print_min": [
+    8.03,
+    26.93
+   ]
+  },
+  "color_dark": {
+   "grounds": [
+    "Ink Deep #1D2532",
+    "near-black (e.g. #0D1117)",
+    "black"
+   ],
+   "not_on": [
+    "Dusk #46546E",
+    "Dusk Deep #2C3548"
+   ],
+   "minimums": "the same as the black and white files (below them, the -color-dark small cuts)",
+   "note": "Dusk Light door between the dark ground and the Warm Light caret/knob, so the light stays the brightest part; replaces the Paper door + Amber light (1.8 : 1, light darker than the door) and its 40 px door minimum"
+  }
+ },
+ "clear_space": {
+  "unit": "R = half the door's width (its arch radius) as placed",
+  "horizontal": {
+   "R": 60.52,
+   "k": 1.5,
+   "units": 90.78,
+   "vs_x_height": 0.997
+  },
+  "horizontal_small": {
+   "R": 62.47,
+   "k": 1.5,
+   "units": 93.7
+  },
+  "stacked": {
+   "R": 109.8,
+   "k": 1.0,
+   "units": 109.8,
+   "vs_x_height": 1.206
+  },
+  "symbol_only": {
+   "R": 62.0,
+   "k": 1.0,
+   "units": 62.0
+  },
+  "wordmark": {
+   "x_height": 91.07
+  },
+  "app_icon_lockup": {
+   "x_height": 91.07,
+   "vs_tile": 0.277
+  }
+ },
+ "print_check_pages": {
+  "A4": {
+   "page_objects": 1,
+   "pages_count": 1
+  },
+  "Letter": {
+   "page_objects": 1,
+   "pages_count": 1
+  }
+ },
+ "natural_height_mm": 276.5
+}

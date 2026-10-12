@@ -1,4 +1,4 @@
-<img src="assets/icon.svg" width="64" height="64" alt="">
+<img src="design/logo/app-icon/AppIcon-1024.png" width="80" height="80" alt="">
 
 # spanreed
 
@@ -50,3 +50,7 @@ Spanreed.app/Contents/MacOS/Spanreed --home-note-folder /tmp/spanreed-home --con
 ```
 
 The equivalent environment variables are `SPANREED_HOME_NOTE_FOLDER` and `SPANREED_CONFIG_FOLDER`. Arguments take precedence. `SPANREED_DEFAULTS_SUITE` chooses a separate UserDefaults suite for isolated runs.
+
+## App icon and logo
+
+The app icon is in `Sources/Spanreed/Assets.xcassets`. The logo, its usage guide and the icon artwork are in [`design/logo/`](design/logo/README.md).
