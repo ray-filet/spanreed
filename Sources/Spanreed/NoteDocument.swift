@@ -7,6 +7,11 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
     private(set) var text = ""
     private(set) var editor: NSTextView?
 
+    override var displayName: String! {
+        get { kind == .home ? "Home Note" : super.displayName }
+        set { super.displayName = newValue }
+    }
+
     override var isDocumentEdited: Bool {
         kind == .home ? false : super.isDocumentEdited
     }
@@ -14,6 +19,14 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
     override class var autosavesInPlace: Bool { false }
     override class var autosavesDrafts: Bool { false }
     override class var preservesVersions: Bool { false }
+
+    override func saveAs(_ sender: Any?) {
+        if kind == .home {
+            runModalSavePanel(for: .saveToOperation, delegate: nil, didSave: nil, contextInfo: nil)
+        } else {
+            super.saveAs(sender)
+        }
+    }
 
     override func makeWindowControllers() {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: 540),
@@ -53,9 +66,20 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
         scrollView.documentView = textView
         window.contentView?.addSubview(scrollView)
         editor = textView
-        addWindowController(NSWindowController(window: window))
+        if kind == .home {
+            addWindowController(HomeNoteWindowController(window: window, defaults: AppPaths.current.defaults))
+        } else {
+            addWindowController(NSWindowController(window: window))
+        }
         if kind == .home { window.title = "Home Note" }
         window.makeFirstResponder(textView)
+    }
+
+    override func read(from url: URL, ofType typeName: String) throws {
+        if url.standardizedFileURL == AppPaths.current.homeNoteURL.standardizedFileURL {
+            kind = .home
+        }
+        try super.read(from: url, ofType: typeName)
     }
 
     override func read(from data: Data, ofType typeName: String) throws {
