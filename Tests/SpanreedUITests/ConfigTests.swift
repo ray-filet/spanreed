@@ -293,7 +293,7 @@ final class ConfigTests: XCTestCase {
         XCTAssertGreaterThan(home.frame.height, defaultHeight)
         XCTAssertLessThan(home.frame.height, configuredHeight)
         XCTAssertEqual(try String(contentsOf: configURL, encoding: .utf8),
-                       "font-size = 24\nselected-fonts = SF Mono\nactive-font = SF Mono\ncurrent-text-size = 24.0\nappearance = system\n")
+                       "font-size = 24\nselected-fonts = \(Self.defaultFontsValue)\nactive-font = SF Mono\ncurrent-text-size = 24.0\nappearance = system\n")
     }
 
     func testOpenTreatsExtensionlessAndUnfamiliarExtensionsAsUTF8Notes() throws {

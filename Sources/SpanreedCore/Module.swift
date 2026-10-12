@@ -38,15 +38,18 @@ public enum Config {
 
     /// Adds absent settings without changing existing values, comments, or line endings.
     /// A saved zoom from older versions is used only when current-text-size is absent.
-    public static func addingMissingSettings(to text: String, fallbackTextSize: Double? = nil) -> String {
+    /// `defaultFonts` supplies selected-fonts when that setting is absent.
+    public static func addingMissingSettings(to text: String, fallbackTextSize: Double? = nil,
+                                             defaultFonts: [String] = ["SF Mono"]) -> String {
         let savedSize = fallbackTextSize.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+        let defaults = makeDefaultText(selectedFonts: defaultFonts)
         if text.isEmpty {
-            return savedSize.map { rewriteCurrentTextSize(defaultText, size: $0) } ?? defaultText
+            return savedSize.map { rewriteCurrentTextSize(defaults, size: $0) } ?? defaults
         }
         let keys = Set(scanLines(text).compactMap(\.key))
         let currentSize = savedSize ?? parse(text, installedFontNames: ["SF Mono"]).currentTextSize
         var completed = text
-        for line in scanLines(defaultText) {
+        for line in scanLines(defaults) {
             guard let key = line.key, !keys.contains(key) else { continue }
             let value = key == "current-text-size" ? String(currentSize) : String(line.value)
             completed = rewriteValue(of: key, in: completed, to: value) { _ in true }
@@ -76,9 +79,12 @@ public enum Config {
         return text + (needsSeparator ? newline : "") + "\(key) = \(newValue)" + newline
     }
 
-    public static let defaultText = """
+    public static let defaultText = makeDefaultText(selectedFonts: ["SF Mono"])
+
+    public static func makeDefaultText(selectedFonts: [String]) -> String {
+        """
     # Font families shown in the font menus, separated by commas.
-    selected-fonts = SF Mono
+    selected-fonts = \(selectedFonts.joined(separator: ", "))
 
     # The Selected Font used in every note.
     active-font = SF Mono
@@ -93,6 +99,7 @@ public enum Config {
     appearance = system
 
     """
+    }
 
     public static func parse(_ text: String, installedFontNames: Set<String>) -> ResolvedConfig {
         var config = ResolvedConfig()

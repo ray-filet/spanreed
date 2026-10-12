@@ -174,10 +174,17 @@ final class FontMenuTests: XCTestCase {
         XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
         openFormatFontMenu()
         let format = application.menuBars.menuBarItems["Format"]
-        XCTAssertEqual(format.menuItems.count, 2)
-        XCTAssertTrue(format.menuItems["SF Mono"].isEnabled)
+        let defaultFonts = Self.defaultFontsValue.components(separatedBy: ", ")
+        XCTAssertEqual(format.menuItems.count, defaultFonts.count + 1, application.debugDescription)
+        for font in defaultFonts {
+            XCTAssertTrue(format.menuItems[font].isEnabled, font)
+        }
+        for font in ["SF Mono", "Menlo", "Monaco", "Courier New", "Andale Mono"] {
+            XCTAssertTrue(defaultFonts.contains(font), font)
+        }
         format.menuItems["SF Mono"].click()
-        XCTAssertTrue(FileManager.default.fileExists(atPath: configURL.path))
+        XCTAssertTrue(try String(contentsOf: configURL, encoding: .utf8)
+            .contains("selected-fonts = \(Self.defaultFontsValue)\n"))
         application.typeKey(",", modifierFlags: .command)
         let config = application.windows["Config"]
         let editor = config.textViews["note-editor"]

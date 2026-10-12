@@ -29,6 +29,8 @@ The launch check copies the app to a temporary folder and runs it without Xcode'
 
 Spanreed creates `~/.config/spanreed/config` on launch and writes every supported setting, including defaults. Existing Config files gain any missing settings on launch or save; comments, explicit values, and line endings are preserved. Open Config with **Command-,** and save to apply edits.
 
+When `selected-fonts` is absent, Spanreed fills it with SF Mono followed by every monospaced font family installed on the Mac, in alphabetical order (on a stock macOS install: Andale Mono, Courier New, Menlo, Monaco, PT Mono). Existing `selected-fonts` values are never changed, and fonts installed later are not added automatically.
+
 `font-size` is the default text size used by **Command-0**. `current-text-size` is the size currently displayed in every Note, saved by the zoom commands and restored on launch. Editing either value leaves the other independent; if `current-text-size` is missing, it starts at `font-size`. Saved zoom from older versions is migrated from UserDefaults when Config has no current size. Window position remains separate app state.
 
 ## Indentation
