@@ -27,8 +27,8 @@ final class FontMenuTests: XCTestCase {
     }
 
     func testFormatFontChoiceRewritesOnlyTheActiveFontAndRetainsZoom() throws {
-        let original = "\u{FEFF}# My Config\r\nselected-fonts = SF Mono, Menlo\r\n\r\nactive-font\t= SF Mono  \r\nfont-size = 20\r\n"
-        let expected = "\u{FEFF}# My Config\r\nselected-fonts = SF Mono, Menlo\r\n\r\nactive-font\t= Menlo  \r\nfont-size = 20\r\n"
+        let original = "\u{FEFF}# My Config\r\nselected-fonts = SF Mono, Menlo\r\n\r\nactive-font\t= SF Mono  \r\nfont-size = 20\r\ncurrent-text-size = 20\r\nappearance = system\r\n"
+        let expected = "\u{FEFF}# My Config\r\nselected-fonts = SF Mono, Menlo\r\n\r\nactive-font\t= Menlo  \r\nfont-size = 20\r\ncurrent-text-size = 22.0\r\nappearance = system\r\n"
         try writeConfig(original)
         application.launch()
         let home = application.windows["home"].textViews["note-editor"]
@@ -50,8 +50,8 @@ final class FontMenuTests: XCTestCase {
     }
 
     func testContextualFontChoiceUpdatesOpenConfigAndPreservesUnsavedEdits() throws {
-        let original = "selected-fonts = SF Mono, Menlo\nactive-font = SF Mono\nfont-size = 20\n"
-        let savedText = "selected-fonts = SF Mono, Menlo\nactive-font = Menlo\nfont-size = 20\n"
+        let original = "selected-fonts = SF Mono, Menlo\nactive-font = SF Mono\nfont-size = 20\ncurrent-text-size = 20\nappearance = system\n"
+        let savedText = "selected-fonts = SF Mono, Menlo\nactive-font = Menlo\nfont-size = 20\ncurrent-text-size = 20\nappearance = system\n"
         let unsavedComment = "# My unfinished Config edit\n"
         try writeConfig(original)
         application.launch()
@@ -84,8 +84,8 @@ final class FontMenuTests: XCTestCase {
     }
 
     func testFontRewriteAndEarlierEditsCanBeUndoneAndRedoneWithoutLosingTheSavePrompt() throws {
-        let original = "selected-fonts = SF Mono, Menlo\nactive-font = SF Mono\nfont-size = 20\n"
-        let savedText = "selected-fonts = SF Mono, Menlo\nactive-font = Menlo\nfont-size = 20\n"
+        let original = "selected-fonts = SF Mono, Menlo\nactive-font = SF Mono\nfont-size = 20\ncurrent-text-size = 20\nappearance = system\n"
+        let savedText = "selected-fonts = SF Mono, Menlo\nactive-font = Menlo\nfont-size = 20\ncurrent-text-size = 20\nappearance = system\n"
         let comment = "# An unsaved comment\n"
         try writeConfig(original)
         application.launch()
@@ -116,8 +116,8 @@ final class FontMenuTests: XCTestCase {
     }
 
     func testCanonicallyEquivalentUnsavedConfigBytesStillRequireSavingAfterAFontChoice() throws {
-        let original = "# Café\nselected-fonts = SF Mono, Menlo\nactive-font = SF Mono\n"
-        let unsavedText = "# Cafe\u{0301}\nselected-fonts = SF Mono, Menlo\nactive-font = SF Mono\n"
+        let original = "# Café\nselected-fonts = SF Mono, Menlo\nactive-font = SF Mono\nfont-size = 20\ncurrent-text-size = 20\nappearance = system\n"
+        let unsavedText = "# Cafe\u{0301}\nselected-fonts = SF Mono, Menlo\nactive-font = SF Mono\nfont-size = 20\ncurrent-text-size = 20\nappearance = system\n"
         try writeConfig(original)
         application.launch()
         XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
@@ -142,7 +142,7 @@ final class FontMenuTests: XCTestCase {
     }
 
     func testBothFontMenusShowOnlySelectedFontsAndDisableTheUnavailableActiveFont() throws {
-        let original = "selected-fonts = SF Mono, Missing Spanreed Test Font, Menlo\nactive-font = Missing Spanreed Test Font\n"
+        let original = "selected-fonts = SF Mono, Missing Spanreed Test Font, Menlo\nactive-font = Missing Spanreed Test Font\nfont-size = 20\ncurrent-text-size = 20\nappearance = system\n"
         try writeConfig(original)
         application.launch()
         XCTAssertTrue(application.dialogs.firstMatch.waitForExistence(timeout: 5))
@@ -169,7 +169,7 @@ final class FontMenuTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: configURL), Data(original.utf8))
     }
 
-    func testFontChoicesCreateMissingConfigAndAppendMissingActiveFont() throws {
+    func testFontChoicesPersistSettingsAndFillMissingActiveFont() throws {
         application.launch()
         XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
         openFormatFontMenu()
@@ -186,11 +186,13 @@ final class FontMenuTests: XCTestCase {
         application.typeKey("a", modifierFlags: .command)
         application.pasteText(text)
         application.typeKey("s", modifierFlags: .command)
-        assertConfigBytes(Data(text.utf8))
+        let completed = text + "active-font = SF Mono\ncurrent-text-size = 20.0\nappearance = system\n"
+        assertConfigBytes(Data(completed.utf8))
+        XCTAssertEqual(editor.value as? String, completed)
         openFormatFontMenu()
         XCTAssertEqual(format.menuItems.count, 3)
         format.menuItems["Menlo"].click()
-        let expected = text + "active-font = Menlo\n"
+        let expected = completed.replacingOccurrences(of: "active-font = SF Mono", with: "active-font = Menlo")
         XCTAssertEqual(try Data(contentsOf: configURL), Data(expected.utf8))
         XCTAssertEqual(editor.value as? String, expected)
         application.typeKey("w", modifierFlags: .command)

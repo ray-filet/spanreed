@@ -25,6 +25,12 @@ The launch check copies the app to a temporary folder and runs it without Xcode'
 
 `SpanreedCore` is a pure Swift framework. Its public Config and indentation behavior is tested in `Tests/SpanreedCoreTests`. App behavior is tested through XCUITest in `Tests/SpanreedUITests`; these tests always launch with temporary Home Note and Config folders.
 
+## Config and text size
+
+Spanreed creates `~/.config/spanreed/config` on launch and writes every supported setting, including defaults. Existing Config files gain any missing settings on launch or save; comments, explicit values, and line endings are preserved. Open Config with **Command-,** and save to apply edits.
+
+`font-size` is the default text size used by **Command-0**. `current-text-size` is the size currently displayed in every Note, saved by the zoom commands and restored on launch. Editing either value leaves the other independent; if `current-text-size` is missing, it starts at `font-size`. Saved zoom from older versions is migrated from UserDefaults when Config has no current size. Window position remains separate app state.
+
 ## Indentation
 
 Tab inserts a tab at the caret. Shift+Tab outdents the current line or all selected lines by one level, removing one leading tab or up to four leading spaces. It keeps the caret or selection in place relative to the text and supports Undo and Redo.

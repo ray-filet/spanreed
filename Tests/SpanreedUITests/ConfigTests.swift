@@ -26,7 +26,94 @@ final class ConfigTests: XCTestCase {
         try? FileManager.default.removeItem(at: testFolder)
     }
 
-    func testCommandCommaCreatesCommentedConfigAndReusesItsWindow() throws {
+    func testLaunchPersistsEveryDefaultWithoutOpeningConfig() throws {
+        application.launch()
+        XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
+        XCTAssertFalse(application.windows["Config"].exists)
+        let original = try Data(contentsOf: configURL)
+        let text = String(decoding: original, as: UTF8.self)
+        for setting in ["selected-fonts = SF Mono", "active-font = SF Mono", "font-size = 20",
+                        "current-text-size = 20", "appearance = system"] {
+            XCTAssertTrue(text.contains(setting), text)
+        }
+        let modificationDate = try configURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+        application.typeKey("q", modifierFlags: .command)
+        XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
+        application.launch()
+        XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
+        XCTAssertEqual(try Data(contentsOf: configURL), original)
+        XCTAssertEqual(try configURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate, modificationDate)
+    }
+
+    func testLaunchMigratesLegacyZoomButExplicitConfigSizeWins() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: defaultsSuite))
+        defaults.set(31, forKey: "CurrentTextSize")
+        application.launch()
+        XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
+        XCTAssertTrue(try String(contentsOf: configURL, encoding: .utf8).contains("current-text-size = 31.0"))
+        XCTAssertNil(defaults.object(forKey: "CurrentTextSize"))
+        application.typeKey("q", modifierFlags: .command)
+        XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
+        try writeConfig("font-size = 24\ncurrent-text-size = 28\n")
+        defaults.set(40, forKey: "CurrentTextSize")
+        application.launch()
+        XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
+        let text = try String(contentsOf: configURL, encoding: .utf8)
+        XCTAssertTrue(text.hasPrefix("font-size = 24\ncurrent-text-size = 28\n"), text)
+        XCTAssertNil(defaults.object(forKey: "CurrentTextSize"))
+        application.typeKey("0", modifierFlags: .command)
+        XCTAssertTrue(try String(contentsOf: configURL, encoding: .utf8).contains("current-text-size = 24.0"))
+    }
+
+    func testAppearanceChoiceRetriesFailedMigrationWithoutLosingLegacyZoom() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: defaultsSuite))
+        defaults.set(31, forKey: "CurrentTextSize")
+        let original = "font-size = 20\n"
+        try writeConfig(original)
+        let folder = configURL.deletingLastPathComponent()
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path) }
+        application.launch()
+        XCTAssertTrue(application.dialogs.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(try String(contentsOf: configURL, encoding: .utf8), original)
+        XCTAssertEqual(defaults.double(forKey: "CurrentTextSize"), 31)
+        application.typeKey(.return, modifierFlags: [])
+        let home = application.windows["home"].textViews["note-editor"]
+        XCTAssertTrue(home.waitForExistence(timeout: 5))
+        let zoomHeight = home.frame.height
+        application.typeKey(",", modifierFlags: .command)
+        let editor = application.windows["Config"].textViews["note-editor"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path)
+        let view = application.menuBars.menuBarItems["View"]
+        view.click()
+        view.menuItems["Appearance"].hover()
+        let dark = view.menuItems["Dark"]
+        XCTAssertTrue(dark.waitForExistence(timeout: 5))
+        dark.click()
+        let saved = try String(contentsOf: configURL, encoding: .utf8)
+        XCTAssertTrue(saved.contains("current-text-size = 31.0"), saved)
+        XCTAssertTrue(saved.contains("appearance = dark"), saved)
+        XCTAssertEqual(editor.value as? String, saved)
+        XCTAssertEqual(home.frame.height, zoomHeight, accuracy: 1)
+        XCTAssertNil(defaults.object(forKey: "CurrentTextSize"))
+    }
+
+    func testUnreadableConfigIsNotOverwrittenAndLegacyZoomIsNotDiscarded() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: defaultsSuite))
+        defaults.set(31, forKey: "CurrentTextSize")
+        try FileManager.default.createDirectory(at: configURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let original = Data([0xFF, 0xFE, 0x00])
+        try original.write(to: configURL)
+        application.launch()
+        XCTAssertTrue(application.dialogs.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertEqual(try Data(contentsOf: configURL), original)
+        XCTAssertEqual(defaults.double(forKey: "CurrentTextSize"), 31)
+        application.typeKey(.return, modifierFlags: [])
+        XCTAssertTrue(application.windows["home"].textViews["note-editor"].exists)
+    }
+
+    func testCommandCommaOpensCommentedConfigAndReusesItsWindow() throws {
         application.launch()
         XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
         application.typeKey(",", modifierFlags: .command)
@@ -39,6 +126,8 @@ final class ConfigTests: XCTestCase {
         XCTAssertTrue(diskText.contains("selected-fonts = SF Mono"))
         XCTAssertTrue(diskText.contains("active-font = SF Mono"))
         XCTAssertTrue(diskText.contains("font-size = 20"))
+        XCTAssertTrue(diskText.contains("current-text-size = 20"))
+        XCTAssertTrue(diskText.contains("appearance = system"))
         application.typeKey("1", modifierFlags: .command)
         application.typeKey(",", modifierFlags: .command)
         XCTAssertEqual(application.windows.count, 2)
@@ -71,7 +160,9 @@ final class ConfigTests: XCTestCase {
         XCTAssertEqual(home.frame.height, defaultHeight, accuracy: 1)
         XCTAssertEqual(try String(contentsOf: configURL, encoding: .utf8), originalConfig)
         application.typeKey("s", modifierFlags: .command)
-        XCTAssertEqual(try String(contentsOf: configURL, encoding: .utf8), newConfig)
+        let savedConfig = newConfig + "current-text-size = 32.0\nappearance = system\n"
+        XCTAssertEqual(try String(contentsOf: configURL, encoding: .utf8), savedConfig)
+        XCTAssertEqual(editor.value as? String, savedConfig)
         XCTAssertGreaterThan(home.frame.height, defaultHeight * 1.4)
         let configuredHeight = home.frame.height
         application.typeKey("=", modifierFlags: [.command, .shift])
@@ -135,7 +226,7 @@ final class ConfigTests: XCTestCase {
     }
 
     func testFileOpenAndRecentRecognizeConfigAndPreserveItsBOMAndCRLFOnSave() throws {
-        let original = "\u{FEFF}# Keep this comment\r\nselected-fonts = SF Mono\r\nactive-font = SF Mono\r\nfont-size = 20\r\n"
+        let original = "\u{FEFF}# Keep this comment\r\nselected-fonts = SF Mono\r\nactive-font = SF Mono\r\nfont-size = 20\r\ncurrent-text-size = 20\r\nappearance = system\r\n"
         try writeConfig(original)
         application.launch()
         let home = application.windows["home"].textViews["note-editor"]
@@ -153,9 +244,9 @@ final class ConfigTests: XCTestCase {
         application.typeKey(",", modifierFlags: .command)
         XCTAssertEqual(application.windows.count, 2)
         application.typeKey(.downArrow, modifierFlags: .command)
-        application.typeText("font-size = 32\n")
+        application.typeText("font-size = 32\ncurrent-text-size = 32\n")
         application.typeKey("s", modifierFlags: .command)
-        XCTAssertEqual(try Data(contentsOf: configURL), Data((original + "font-size = 32\n").utf8))
+        XCTAssertEqual(try Data(contentsOf: configURL), Data((original + "font-size = 32\ncurrent-text-size = 32\n").utf8))
         XCTAssertGreaterThan(home.frame.height, defaultHeight * 1.4)
         application.typeKey("w", modifierFlags: .command)
         XCTAssertFalse(config.exists)
@@ -168,7 +259,7 @@ final class ConfigTests: XCTestCase {
         application.typeKey(",", modifierFlags: .command)
         XCTAssertEqual(application.windows.count, 2)
         application.typeKey(.downArrow, modifierFlags: .command)
-        application.typeText("font-size = 24\n")
+        application.typeText("font-size = 24\ncurrent-text-size = 24\n")
         application.typeKey("s", modifierFlags: .command)
         XCTAssertGreaterThan(home.frame.height, defaultHeight)
         XCTAssertLessThan(home.frame.height, defaultHeight * 1.4)
@@ -192,14 +283,17 @@ final class ConfigTests: XCTestCase {
         XCTAssertGreaterThan(zoomHeight, configuredHeight)
         application.typeKey("q", modifierFlags: .command)
         XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
-        try writeConfig("font-size = 24\n")
+        let zoomConfig = try String(contentsOf: configURL, encoding: .utf8)
+        XCTAssertTrue(zoomConfig.contains("current-text-size = 34.0"), zoomConfig)
+        try writeConfig(zoomConfig.replacingOccurrences(of: "font-size = 32\n", with: "font-size = 24\n"))
         application.launch()
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         XCTAssertEqual(home.frame.height, zoomHeight, accuracy: 1)
         application.typeKey("0", modifierFlags: .command)
         XCTAssertGreaterThan(home.frame.height, defaultHeight)
         XCTAssertLessThan(home.frame.height, configuredHeight)
-        XCTAssertEqual(try String(contentsOf: configURL, encoding: .utf8), "font-size = 24\n")
+        XCTAssertEqual(try String(contentsOf: configURL, encoding: .utf8),
+                       "font-size = 24\nselected-fonts = SF Mono\nactive-font = SF Mono\ncurrent-text-size = 24.0\nappearance = system\n")
     }
 
     func testOpenTreatsExtensionlessAndUnfamiliarExtensionsAsUTF8Notes() throws {

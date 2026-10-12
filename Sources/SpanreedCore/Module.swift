@@ -13,6 +13,7 @@ public struct ResolvedConfig: Equatable, Sendable {
     public var selectedFonts: [String] = ["SF Mono"]
     public var activeFont = "SF Mono"
     public var fontSize: Double = 20
+    public var currentTextSize: Double = 20
     public var appearance = Appearance.system
     public var effectiveFont = "SF Mono"
     public var unavailableFonts: [String] = []
@@ -29,6 +30,28 @@ public enum Config {
     /// Rewrites the last valid appearance value with the same byte-preserving rules as the Active Font.
     public static func rewriteAppearance(_ text: String, appearance: Appearance) -> String {
         rewriteValue(of: "appearance", in: text, to: appearance.rawValue) { Appearance(rawValue: String($0)) != nil }
+    }
+
+    public static func rewriteCurrentTextSize(_ text: String, size: Double) -> String {
+        rewriteValue(of: "current-text-size", in: text, to: String(size), isValid: isValidTextSize)
+    }
+
+    /// Adds absent settings without changing existing values, comments, or line endings.
+    /// A saved zoom from older versions is used only when current-text-size is absent.
+    public static func addingMissingSettings(to text: String, fallbackTextSize: Double? = nil) -> String {
+        let savedSize = fallbackTextSize.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+        if text.isEmpty {
+            return savedSize.map { rewriteCurrentTextSize(defaultText, size: $0) } ?? defaultText
+        }
+        let keys = Set(scanLines(text).compactMap(\.key))
+        let currentSize = savedSize ?? parse(text, installedFontNames: ["SF Mono"]).currentTextSize
+        var completed = text
+        for line in scanLines(defaultText) {
+            guard let key = line.key, !keys.contains(key) else { continue }
+            let value = key == "current-text-size" ? String(currentSize) : String(line.value)
+            completed = rewriteValue(of: key, in: completed, to: value) { _ in true }
+        }
+        return completed
     }
 
     private static func rewriteValue(of key: String, in text: String, to newValue: String,
@@ -63,6 +86,9 @@ public enum Config {
     # Default text size in points. Command-0 returns to this size.
     font-size = 20
 
+    # Current text size in points, saved by the text zoom commands.
+    current-text-size = 20
+
     # Light or dark look: system (follow macOS), light, or dark.
     appearance = system
 
@@ -72,6 +98,7 @@ public enum Config {
         var config = ResolvedConfig()
         var selectedFontsLine = 1
         var activeFontLine: Int?
+        var currentTextSize: Double?
         for line in scanLines(text) {
             func report(_ message: String) {
                 config.errors.append(ConfigError(lineNumber: line.number, message: message))
@@ -103,12 +130,16 @@ public enum Config {
                 }
                 config.activeFont = String(value)
                 activeFontLine = line.number
-            case "font-size":
-                guard let size = Double(value), size.isFinite, size > 0 else {
-                    report("font-size must be a positive, finite number.")
+            case "font-size", "current-text-size":
+                guard isValidTextSize(value), let size = Double(value) else {
+                    report("\(key) must be a positive, finite number.")
                     continue
                 }
-                config.fontSize = size
+                if key == "font-size" {
+                    config.fontSize = size
+                } else {
+                    currentTextSize = size
+                }
             case "appearance":
                 guard let appearance = Appearance(rawValue: String(value)) else {
                     report("appearance must be system, light, or dark.")
@@ -119,6 +150,7 @@ public enum Config {
                 report("Unknown key '\(key)'.")
             }
         }
+        config.currentTextSize = currentTextSize ?? config.fontSize
         config.effectiveFont = config.activeFont
         if !config.selectedFonts.contains(config.activeFont) {
             config.errors.append(ConfigError(lineNumber: activeFontLine ?? selectedFontsLine,
@@ -157,6 +189,11 @@ public enum Config {
                 let end = value.rangeOfCharacter(from: .whitespaces.inverted, options: .backwards)?.upperBound ?? value.endIndex
                 return ScannedLine(number: index + 1, key: key, value: value[start..<end])
             }
+    }
+
+    private static func isValidTextSize(_ value: Substring) -> Bool {
+        guard let size = Double(value) else { return false }
+        return size.isFinite && size > 0
     }
 
     private static func isValidActiveFont(_ value: Substring) -> Bool {

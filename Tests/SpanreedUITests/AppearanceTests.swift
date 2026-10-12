@@ -24,7 +24,7 @@ final class AppearanceTests: XCTestCase {
     }
 
     func testAppearanceChoicesApplyToAllNotesAndPersistAcrossRelaunch() throws {
-        let original = "\u{FEFF}# Keep my Config\r\nfont-size = 20\r\nappearance\t= system  \r\n"
+        let original = "\u{FEFF}# Keep my Config\r\nfont-size = 20\r\nappearance\t= system  \r\nselected-fonts = SF Mono\r\nactive-font = SF Mono\r\ncurrent-text-size = 20\r\n"
         try writeConfig(original)
         application.launch()
         let home = application.windows["home"]
@@ -60,8 +60,8 @@ final class AppearanceTests: XCTestCase {
     }
 
     func testAppearanceChoicePreservesUnsavedConfigEditsAndUndo() throws {
-        let original = "# My Config\nfont-size = 20\nappearance = system\n"
-        let saved = "# My Config\nfont-size = 20\nappearance = dark\n"
+        let original = "# My Config\nfont-size = 20\nappearance = system\nselected-fonts = SF Mono\nactive-font = SF Mono\ncurrent-text-size = 20\n"
+        let saved = "# My Config\nfont-size = 20\nappearance = dark\nselected-fonts = SF Mono\nactive-font = SF Mono\ncurrent-text-size = 20\n"
         let comment = "# An unfinished Config edit\n"
         try writeConfig(original)
         application.launch()
@@ -86,7 +86,7 @@ final class AppearanceTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: configURL), Data((saved + comment).utf8))
     }
 
-    func testSavingAppearanceInConfigAppliesItAndMenuChoiceCreatesMissingConfig() throws {
+    func testSavingAppearanceInConfigAppliesItAndMenuChoicePersistsSystem() throws {
         application.launch()
         let home = application.windows["home"]
         XCTAssertTrue(home.textViews["note-editor"].waitForExistence(timeout: 5))
@@ -103,8 +103,9 @@ final class AppearanceTests: XCTestCase {
         assertBackground(of: home, near: 1.0)
         application.typeKey(",", modifierFlags: .command)
         chooseAppearance("System")
-        XCTAssertEqual(editor.value as? String, "appearance = system\n")
-        XCTAssertEqual(try String(contentsOf: configURL, encoding: .utf8), "appearance = system\n")
+        let expected = "appearance = system\nselected-fonts = SF Mono\nactive-font = SF Mono\nfont-size = 20\ncurrent-text-size = 20.0\n"
+        XCTAssertEqual(editor.value as? String, expected)
+        XCTAssertEqual(try String(contentsOf: configURL, encoding: .utf8), expected)
         application.typeKey("w", modifierFlags: .command)
         XCTAssertFalse(application.windows["Config"].exists)
     }

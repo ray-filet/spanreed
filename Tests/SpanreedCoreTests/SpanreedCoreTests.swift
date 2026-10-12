@@ -4,6 +4,87 @@ import SpanreedCore
 final class SpanreedCoreTests: XCTestCase {
     private let installedFonts: Set<String> = ["SF Mono", "Menlo", "Arial"]
 
+    func testMissingSettingsArePersistedAndCompletionIsIdempotent() {
+        XCTAssertEqual(Config.addingMissingSettings(to: ""), Config.defaultText)
+        let original = "# My Config\nfont-size = 32.5\n"
+        let completed = Config.addingMissingSettings(to: original)
+        XCTAssertEqual(completed, original + "selected-fonts = SF Mono\nactive-font = SF Mono\ncurrent-text-size = 32.5\nappearance = system\n")
+        XCTAssertEqual(Config.addingMissingSettings(to: completed), completed)
+        let config = Config.parse(completed, installedFontNames: installedFonts)
+        XCTAssertEqual(config.fontSize, 32.5)
+        XCTAssertEqual(config.currentTextSize, 32.5)
+        XCTAssertEqual(config.errors, [])
+    }
+
+    func testEverySupportedSettingIsFilledWhenMissing() {
+        let expected = Config.parse(Config.defaultText, installedFontNames: installedFonts)
+        for setting in ["selected-fonts = SF Mono", "active-font = SF Mono", "font-size = 20",
+                        "current-text-size = 20", "appearance = system"] {
+            let original = Config.defaultText.replacingOccurrences(of: setting + "\n", with: "")
+            let completed = Config.addingMissingSettings(to: original)
+            XCTAssertTrue(completed.hasPrefix(original))
+            XCTAssertEqual(Config.parse(completed, installedFontNames: installedFonts), expected)
+        }
+    }
+
+    func testCompleteConfigKeepsItsExactBytesEvenWithLegacyZoom() {
+        let original = "\u{FEFF}# Cafe\u{0301}\r\nselected-fonts = Menlo, Arial\r\nactive-font = Arial\r\nfont-size = 24.5\r\ncurrent-text-size = 28.5\r\nappearance = dark"
+        XCTAssertEqual(Data(Config.addingMissingSettings(to: original, fallbackTextSize: 31).utf8), Data(original.utf8))
+    }
+
+    func testCompletingConfigPreservesBOMLineEndingsAndExistingValues() {
+        for newline in ["\n", "\r\n", "\r"] {
+            let original = "\u{FEFF}# Café 日本\(newline)selected-fonts\t= Menlo, SF Mono  \(newline)active-font = Menlo\(newline)font-size = 24"
+            let expected = original + newline + "current-text-size = 24.0\(newline)appearance = system\(newline)"
+            let completed = Config.addingMissingSettings(to: original)
+            XCTAssertEqual(Data(completed.utf8), Data(expected.utf8))
+            XCTAssertEqual(Config.addingMissingSettings(to: completed), completed)
+        }
+        XCTAssertTrue(Config.addingMissingSettings(to: "\u{FEFF}").hasPrefix("\u{FEFF}selected-fonts = SF Mono\n"))
+    }
+
+    func testCompletingConfigRetainsInvalidValuesAndTheirErrors() {
+        let original = "font-size = nope\ncurrent-text-size = -2\nappearance = sepia\nunknown = value\n"
+        let completed = Config.addingMissingSettings(to: original)
+        XCTAssertTrue(completed.hasPrefix(original))
+        XCTAssertEqual(Config.parse(completed, installedFontNames: installedFonts),
+                       Config.parse(original, installedFontNames: installedFonts))
+    }
+
+    func testSavedZoomOnlyFillsAnAbsentCurrentTextSize() {
+        let migrated = Config.addingMissingSettings(to: "font-size = 24\n", fallbackTextSize: 31)
+        XCTAssertEqual(Config.parse(migrated, installedFontNames: installedFonts).currentTextSize, 31)
+        let fresh = Config.addingMissingSettings(to: "", fallbackTextSize: 31)
+        XCTAssertEqual(Config.parse(fresh, installedFontNames: installedFonts).currentTextSize, 31)
+        let explicit = Config.addingMissingSettings(to: "current-text-size = 28\n", fallbackTextSize: 31)
+        XCTAssertEqual(Config.parse(explicit, installedFontNames: installedFonts).currentTextSize, 28)
+        for size in [Double.nan, .infinity, 0, -2] {
+            XCTAssertEqual(Config.addingMissingSettings(to: "", fallbackTextSize: size), Config.defaultText)
+        }
+    }
+
+    func testCurrentTextSizeIsIndependentAndFallsBackToTheDefaultSize() {
+        XCTAssertEqual(Config.parse("font-size = 32\n", installedFontNames: installedFonts).currentTextSize, 32)
+        let config = Config.parse("current-text-size = 25.5\nfont-size = 32\n", installedFontNames: installedFonts)
+        XCTAssertEqual(config.fontSize, 32)
+        XCTAssertEqual(config.currentTextSize, 25.5)
+        for invalid in ["nope", "0", "-2", "inf", "nan"] {
+            let config = Config.parse("font-size = 24\ncurrent-text-size = \(invalid)\n", installedFontNames: installedFonts)
+            XCTAssertEqual(config.currentTextSize, 24)
+            XCTAssertEqual(config.errors.map(\.lineNumber), [2])
+        }
+    }
+
+    func testCurrentTextSizeRewritePreservesBytesAndUsesTheLastValidValue() {
+        let original = "\u{FEFF}# Café 日本\r\ncurrent-text-size = 20\r\n  current-text-size\t= 24  \r\ncurrent-text-size = invalid\r\nfont-size = 20.0\n"
+        let expected = original.replacingOccurrences(of: "= 24  ", with: "= 28.0  ")
+        let rewritten = Config.rewriteCurrentTextSize(original, size: 28)
+        XCTAssertEqual(Data(rewritten.utf8), Data(expected.utf8))
+        XCTAssertEqual(Config.parse(rewritten, installedFontNames: installedFonts).currentTextSize, 28)
+        XCTAssertEqual(Config.rewriteCurrentTextSize("font-size = 20", size: 21), "font-size = 20\ncurrent-text-size = 21.0\n")
+        XCTAssertEqual(Config.rewriteCurrentTextSize("current-text-size = invalid\n", size: 21), "current-text-size = 21.0\n")
+    }
+
     func testActiveFontRewritePreservesEveryByteOutsideTheValue() {
         let text = "\u{FEFF}  active-font\t = \tSF Mono  \r\n# Café 日本\r\n\r\nfont-size=20.0\nselected-fonts = SF Mono, Menlo\r\n"
         let expected = "\u{FEFF}  active-font\t = \tMenlo  \r\n# Café 日本\r\n\r\nfont-size=20.0\nselected-fonts = SF Mono, Menlo\r\n"
@@ -164,7 +245,8 @@ final class SpanreedCoreTests: XCTestCase {
         XCTAssertEqual(config.appearance, .system)
         XCTAssertEqual(config.errors, [])
         let lines = text.split(whereSeparator: { $0.isNewline })
-        for key in ["selected-fonts", "active-font", "font-size", "appearance"] {
+        XCTAssertEqual(config.currentTextSize, 20)
+        for key in ["selected-fonts", "active-font", "font-size", "current-text-size", "appearance"] {
             let index = lines.firstIndex { $0.hasPrefix(key + " =") }
             XCTAssertNotNil(index)
             if let index {
