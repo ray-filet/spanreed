@@ -120,9 +120,10 @@ final class SpanreedCoreTests: XCTestCase {
         XCTAssertEqual(config.selectedFonts, ["SF Mono"])
         XCTAssertEqual(config.activeFont, "SF Mono")
         XCTAssertEqual(config.fontSize, 20)
+        XCTAssertEqual(config.appearance, .system)
         XCTAssertEqual(config.errors, [])
         let lines = text.split(whereSeparator: { $0.isNewline })
-        for key in ["selected-fonts", "active-font", "font-size"] {
+        for key in ["selected-fonts", "active-font", "font-size", "appearance"] {
             let index = lines.firstIndex { $0.hasPrefix(key + " =") }
             XCTAssertNotNil(index)
             if let index {
@@ -130,5 +131,28 @@ final class SpanreedCoreTests: XCTestCase {
                 if index > lines.startIndex { XCTAssertTrue(lines[index - 1].hasPrefix("#")) }
             }
         }
+    }
+    func testAppearanceDefaultsToSystemAndParsesEachMode() {
+        XCTAssertEqual(Config.parse("", installedFontNames: installedFonts).appearance, .system)
+        for appearance in Appearance.allCases {
+            let config = Config.parse("appearance = \(appearance.rawValue)", installedFontNames: installedFonts)
+            XCTAssertEqual(config.appearance, appearance)
+            XCTAssertEqual(config.errors, [])
+        }
+    }
+    func testInvalidAppearanceReportsItsLineAndFallsBackToSystem() {
+        let config = Config.parse("font-size = 18\nappearance = sepia\n", installedFontNames: installedFonts)
+        XCTAssertEqual(config.appearance, .system)
+        XCTAssertEqual(config.fontSize, 18)
+        XCTAssertEqual(config.errors.map(\.lineNumber), [2])
+    }
+    func testAppearanceRewritePreservesEveryByteOutsideTheValue() {
+        let original = "\u{FEFF}# Mine\r\nactive-font = SF Mono\r\nappearance\t= system  \r\nfont-size = 20\r\n"
+        let expected = "\u{FEFF}# Mine\r\nactive-font = SF Mono\r\nappearance\t= dark  \r\nfont-size = 20\r\n"
+        XCTAssertEqual(Config.rewriteAppearance(original, appearance: .dark), expected)
+    }
+    func testMissingAppearanceIsAppendedAndInvalidOneIsRepaired() {
+        XCTAssertEqual(Config.rewriteAppearance("font-size = 20", appearance: .light), "font-size = 20\nappearance = light\n")
+        XCTAssertEqual(Config.rewriteAppearance("appearance = sepia\n", appearance: .dark), "appearance = dark\n")
     }
 }

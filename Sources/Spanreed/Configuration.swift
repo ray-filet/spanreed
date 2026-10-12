@@ -31,6 +31,7 @@ final class Configuration {
         let installedFonts = Set(NSFontManager.shared.availableFontFamilies).union(["SF Mono"])
         snapshot = Config.parse(text, installedFontNames: installedFonts)
         messages += snapshot.errors.map { "Line \($0.lineNumber): \($0.message)" }
+        applyAppearance()
         TextPresentation.shared.applyConfiguration(fontName: snapshot.effectiveFont,
                                                    defaultSize: CGFloat(snapshot.fontSize))
         return messages
@@ -52,18 +53,33 @@ final class Configuration {
 
     func chooseFont(_ font: String) {
         guard snapshot.selectedFonts.contains(font), !snapshot.unavailableFonts.contains(font) else { return }
+        rewriteConfig(actionName: "Change Active Font") { Config.rewriteActiveFont($0, fontName: font) }
+    }
+
+    func chooseAppearance(_ appearance: Appearance) {
+        rewriteConfig(actionName: "Change Appearance") { Config.rewriteAppearance($0, appearance: appearance) }
+    }
+
+    private func applyAppearance() {
+        switch snapshot.appearance {
+        case .system: NSApp.appearance = nil
+        case .light: NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
+    }
+
+    private func rewriteConfig(actionName: String, _ rewrite: (String) -> String) {
         do {
             let paths = AppPaths.current
             let original = FileManager.default.fileExists(atPath: paths.configURL.path)
                 ? try readText() : Config.defaultText
-            let savedText = Config.rewriteActiveFont(original, fontName: font)
+            let savedText = rewrite(original)
             try FileManager.default.createDirectory(at: paths.configFolder, withIntermediateDirectories: true)
             try Data(savedText.utf8).write(to: paths.configURL, options: .atomic)
             if let note = NSDocumentController.shared.document(for: paths.configURL) as? NoteDocument {
                 // This app wrote the file. Keep classic Save from treating that as an external edit.
                 note.fileModificationDate = try paths.configURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
-                let updatedText = Config.rewriteActiveFont(note.text, fontName: font)
-                note.replaceConfigText(updatedText, savedText: savedText)
+                note.replaceConfigText(rewrite(note.text), savedText: savedText, actionName: actionName)
             }
             reloadAndPresentErrors()
         } catch {
