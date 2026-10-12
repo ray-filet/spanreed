@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="da-favicon-tile-door-ajar-small-f73d75">
-<title id="da-favicon-tile-door-ajar-small-f73d75">Spanreed favicon tile, Door Ajar (small cut on the 16 px icon wall; for favicon.ico and favicon PNGs, which cannot follow the browser theme)</title>
-<defs><linearGradient id="da-favicon-tile-wall" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="256"><stop offset="0" stop-color="#55647F"/><stop offset="0.88" stop-color="#3D4A64"/><stop offset="0.88" stop-color="#2C3548"/><stop offset="1" stop-color="#222A39"/></linearGradient><linearGradient id="da-favicon-tile-light" gradientUnits="userSpaceOnUse" x1="0" y1="88" x2="0" y2="224"><stop offset="0" stop-color="#FFE2A3"/><stop offset="1" stop-color="#F4B862"/></linearGradient><linearGradient id="da-favicon-tile-door" gradientUnits="userSpaceOnUse" x1="0" y1="24" x2="0" y2="224"><stop offset="0" stop-color="#26303F"/><stop offset="1" stop-color="#1D2532"/></linearGradient></defs>
-<path fill="url(#da-favicon-tile-wall)" d="M73.17 0 L182.83 0 C238.85 0 256 17.15 256 73.17 L256 182.83 C256 238.85 238.85 256 182.83 256 L73.17 256 C17.15 256 0 238.85 0 182.83 L0 73.17 C0 17.15 17.15 0 73.17 0 Z"/>
-<path fill="url(#da-favicon-tile-light)" d="M143 224 L143 100 A17 17 0 0 1 177 100 L177 224 Z"/>
-<path fill="url(#da-favicon-tile-door)" d="M64 224 L64 88 A64 64 0 0 1 192 88 L192 224 L176 224 L176 100 A16 16 0 0 0 144 100 L144 224 Z"/>
-<path fill="#E3AE5E" d="M129.6 136 A9.6 9.6 0 1 0 110.4 136 A9.6 9.6 0 1 0 129.6 136 Z"/>
-</svg>

@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-labelledby="da-app-icon-door-ajar-icon-comp-312267">
-<title id="da-app-icon-door-ajar-icon-comp-312267">Spanreed app icon, Door Ajar: Icon Composer layer 00-background (1024 canvas, no tile mask, no shadow)</title>
-<defs><linearGradient id="da-ic-background-wall" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="1024"><stop offset="0" stop-color="#46546E"/><stop offset="0.8" stop-color="#313B50"/><stop offset="0.8" stop-color="#2C3548"/><stop offset="1" stop-color="#222A39"/></linearGradient></defs>
-<path fill="url(#da-ic-background-wall)" d="M0 0 H1024 V1024 H0 Z"/>
-</svg>

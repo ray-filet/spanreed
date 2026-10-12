@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="da-favicon-door-ajar-colour-on-0852ec">
-<title id="da-favicon-door-ajar-colour-on-0852ec">Spanreed favicon, Door Ajar (colour on light tab strips, Paper on dark ones)</title>
-<style>.da-fav-cut{display:none}@media (prefers-color-scheme:dark){.da-fav-solid,.da-fav-light{display:none}.da-fav-cut{display:inline}}</style>
-<path class="da-fav-solid" fill="#26303F" d="M48 240 L48 80 A80 80 0 0 1 208 80 L208 240 Z"/>
-<path class="da-fav-light" fill="#F0A94B" d="M144 240 L144 91 A16 16 0 0 1 176 91 L176 240 Z M113.6 136 A9.6 9.6 0 1 0 94.4 136 A9.6 9.6 0 1 0 113.6 136 Z"/>
-<path class="da-fav-cut" fill="#F7F2E8" fill-rule="evenodd" d="M48 240 L48 80 A80 80 0 0 1 208 80 L208 240 L176 240 L176 91 A16 16 0 0 0 144 91 L144 240 Z M113.6 136 A9.6 9.6 0 1 0 94.4 136 A9.6 9.6 0 1 0 113.6 136 Z"/>
-</svg>
