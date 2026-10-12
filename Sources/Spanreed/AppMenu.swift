@@ -38,6 +38,10 @@ struct AppMenu {
         let replace = find.addItem(withTitle: "Find and Replace…", action: #selector(NSResponder.performTextFinderAction(_:)), keyEquivalent: "f")
         replace.keyEquivalentModifierMask = [.command, .option]
         replace.tag = NSTextFinder.Action.showReplaceInterface.rawValue
+        let format = submenu("Format", in: bar)
+        let font = NSMenuItem(title: "Font", action: nil, keyEquivalent: "")
+        font.submenu = FontMenu.shared.makeMenu()
+        format.addItem(font)
         let view = submenu("View", in: bar)
         let increase = view.addItem(withTitle: "Increase Text Size", action: #selector(TextPresentation.increaseTextSize(_:)), keyEquivalent: "+")
         increase.target = TextPresentation.shared

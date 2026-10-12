@@ -4,6 +4,41 @@ import SpanreedCore
 final class SpanreedCoreTests: XCTestCase {
     private let installedFonts: Set<String> = ["SF Mono", "Menlo", "Arial"]
 
+    func testActiveFontRewritePreservesEveryByteOutsideTheValue() {
+        let text = "\u{FEFF}  active-font\t = \tSF Mono  \r\n# Café 日本\r\n\r\nfont-size=20.0\nselected-fonts = SF Mono, Menlo\r\n"
+        let expected = "\u{FEFF}  active-font\t = \tMenlo  \r\n# Café 日本\r\n\r\nfont-size=20.0\nselected-fonts = SF Mono, Menlo\r\n"
+        XCTAssertEqual(Data(Config.rewriteActiveFont(text, fontName: "Menlo").utf8), Data(expected.utf8))
+    }
+
+    func testMissingActiveFontIsAppendedWithTheExistingLineEnding() {
+        let examples = [
+            ("", "active-font = Menlo\n"),
+            ("\u{FEFF}", "\u{FEFF}active-font = Menlo\n"),
+            ("# My Config\nfont-size = 20", "# My Config\nfont-size = 20\nactive-font = Menlo\n"),
+            ("# My Config\r\nfont-size = 20\r\n", "# My Config\r\nfont-size = 20\r\nactive-font = Menlo\r\n"),
+            ("font-size = 20\r", "font-size = 20\ractive-font = Menlo\r")
+        ]
+        for (original, expected) in examples {
+            XCTAssertEqual(Data(Config.rewriteActiveFont(original, fontName: "Menlo").utf8), Data(expected.utf8))
+        }
+    }
+
+    func testActiveFontRewriteUpdatesTheLastValidDuplicate() {
+        let original = "# active-font = comment\nactive-font = Arial\nactive-font = SF Mono\nactive-font = broken=value\nfont-size = 20\n"
+        let expected = "# active-font = comment\nactive-font = Arial\nactive-font = Menlo\nactive-font = broken=value\nfont-size = 20\n"
+        let rewritten = Config.rewriteActiveFont(original, fontName: "Menlo")
+        XCTAssertEqual(rewritten, expected)
+        XCTAssertEqual(Config.parse(rewritten, installedFontNames: installedFonts).activeFont, "Menlo")
+    }
+
+    func testActiveFontRewriteRepairsAnInvalidValueWithoutAddingAKey() {
+        let original = "active-font = broken=value\nactive-font\t=   \nselected-fonts = SF Mono, Menlo\n"
+        let expected = "active-font = broken=value\nactive-font\t=   Menlo\nselected-fonts = SF Mono, Menlo\n"
+        let rewritten = Config.rewriteActiveFont(original, fontName: "Menlo")
+        XCTAssertEqual(rewritten, expected)
+        XCTAssertEqual(Config.parse(rewritten, installedFontNames: installedFonts).activeFont, "Menlo")
+    }
+
     func testEmptyConfigResolvesToDefaultsWithoutErrors() {
         let config = Config.parse("", installedFontNames: installedFonts)
         XCTAssertEqual(config.selectedFonts, ["SF Mono"])
