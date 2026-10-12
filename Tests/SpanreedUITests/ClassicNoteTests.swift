@@ -63,7 +63,106 @@ final class ClassicNoteTests: XCTestCase {
         XCTAssertEqual(reopened.textViews["note-editor"].value as? String, "A recently opened note")
     }
 
+    func testOpenedNoteWritesUTF8OnlyWhenSavedAndClosesWithoutPromptAfterSaving() throws {
+        let url = testFolder.appendingPathComponent("Saved note.txt")
+        let original = "Café 日本"
+        try original.write(to: url, atomically: true, encoding: .utf8)
+        application.launch()
+        try openNote(url)
+        let note = application.windows[url.lastPathComponent]
+        XCTAssertEqual(note.textViews["note-editor"].value as? String, original)
+        application.typeKey(.downArrow, modifierFlags: .command)
+        application.typeText("\nA manual save")
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), original)
+        attachScreenshot(named: "Classic note with unsaved changes")
+        application.typeKey("s", modifierFlags: .command)
+        let saved = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            (try? String(contentsOf: url, encoding: .utf8)) == "Café 日本\nA manual save"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [saved], timeout: 5), .completed)
+        attachScreenshot(named: "Classic note after saving")
+        application.typeKey("w", modifierFlags: .command)
+        XCTAssertFalse(note.exists)
+        XCTAssertEqual(application.windows.count, 1)
+        XCTAssertFalse(application.sheets.firstMatch.exists)
+    }
+
+    func testOpenAcceptsTextMarkdownAndLogNotesWithNonASCIIText() throws {
+        application.launch()
+        for ext in ["txt", "md", "log"] {
+            let url = testFolder.appendingPathComponent("UTF8 note.\(ext)")
+            let text = "Café 日本 in a .\(ext) note"
+            try text.write(to: url, atomically: true, encoding: .utf8)
+            try openNote(url)
+            XCTAssertEqual(application.windows[url.lastPathComponent].textViews["note-editor"].value as? String, text)
+            application.typeKey("w", modifierFlags: .command)
+            XCTAssertEqual(application.windows.count, 1)
+        }
+    }
+
+    func testInvalidUTF8ShowsAnErrorWithoutOpeningOrChangingTheFile() throws {
+        let url = testFolder.appendingPathComponent("Invalid UTF8.txt")
+        let bytes = Data([0x66, 0x6f, 0x80, 0xff])
+        try bytes.write(to: url)
+        application.launch()
+        try chooseNoteInOpenPanel(url)
+        attachScreenshot(named: "Rejected invalid UTF-8 note")
+        let errorAlert = application.dialogs.firstMatch
+        XCTAssertTrue(errorAlert.waitForExistence(timeout: 5))
+        XCTAssertTrue((errorAlert.staticTexts.firstMatch.value as? String)?.contains("could not be opened") == true)
+        XCTAssertEqual(application.textViews.matching(identifier: "note-editor").count, 1)
+        application.typeKey(.return, modifierFlags: [])
+        XCTAssertEqual(application.windows.count, 1)
+        XCTAssertTrue(application.windows["Home Note"].exists)
+        XCTAssertEqual(try Data(contentsOf: url), bytes)
+    }
+
+    func testSaveAsMovesClassicNoteToItsNewLocationForLaterSaves() throws {
+        let original = testFolder.appendingPathComponent("Original note.txt")
+        let renamed = testFolder.appendingPathComponent("Renamed note.txt")
+        try "Original location".write(to: original, atomically: true, encoding: .utf8)
+        application.launch()
+        try openNote(original)
+        application.typeKey(.downArrow, modifierFlags: .command)
+        application.typeText("\nBefore Save As")
+        application.typeKey("s", modifierFlags: [.command, .shift])
+        let savePanel = application.windows[original.lastPathComponent].sheets.firstMatch
+        XCTAssertTrue(savePanel.waitForExistence(timeout: 5))
+        application.typeKey("g", modifierFlags: [.command, .shift])
+        application.typeKey("a", modifierFlags: .command)
+        application.typeText(testFolder.path)
+        application.typeKey(.return, modifierFlags: [])
+        let name = savePanel.textFields["saveAsNameTextField"]
+        name.click()
+        application.typeKey("a", modifierFlags: .command)
+        name.typeText(renamed.lastPathComponent)
+        savePanel.buttons["OKButton"].click()
+        XCTAssertTrue(application.windows[renamed.lastPathComponent].waitForExistence(timeout: 5))
+        XCTAssertEqual(try String(contentsOf: original, encoding: .utf8), "Original location")
+        XCTAssertEqual(try String(contentsOf: renamed, encoding: .utf8), "Original location\nBefore Save As")
+        application.typeKey(.downArrow, modifierFlags: .command)
+        application.typeText("\nAfter Save As")
+        application.typeKey("s", modifierFlags: .command)
+        let saved = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            (try? String(contentsOf: renamed, encoding: .utf8)) == "Original location\nBefore Save As\nAfter Save As"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [saved], timeout: 5), .completed)
+        XCTAssertEqual(try String(contentsOf: original, encoding: .utf8), "Original location")
+    }
+
+    private func attachScreenshot(named name: String) {
+        let screenshot = XCTAttachment(screenshot: application.screenshot())
+        screenshot.name = name
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
     private func openNote(_ url: URL) throws {
+        try chooseNoteInOpenPanel(url)
+        XCTAssertTrue(application.windows[url.lastPathComponent].waitForExistence(timeout: 5))
+    }
+
+    private func chooseNoteInOpenPanel(_ url: URL) throws {
         application.typeKey("o", modifierFlags: .command)
         XCTAssertTrue(application.buttons["OKButton"].waitForExistence(timeout: 5))
         application.typeKey("g", modifierFlags: [.command, .shift])
@@ -71,6 +170,5 @@ final class ClassicNoteTests: XCTestCase {
         application.typeText(url.path)
         application.typeKey(.return, modifierFlags: [])
         application.buttons["OKButton"].click()
-        XCTAssertTrue(application.windows[url.lastPathComponent].waitForExistence(timeout: 5))
     }
 }
