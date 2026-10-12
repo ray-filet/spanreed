@@ -34,6 +34,9 @@ struct AppMenu {
         replace.keyEquivalentModifierMask = [.command, .option]
         replace.tag = NSTextFinder.Action.showReplaceInterface.rawValue
         let window = submenu("Window", in: bar)
+        let home = window.addItem(withTitle: "Home Note", action: #selector(NoteDocumentController.openHomeNote(_:)), keyEquivalent: "1")
+        home.target = NSDocumentController.shared
+        window.addItem(.separator())
         window.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
         NSApp.windowsMenu = window
         NSApp.mainMenu = bar
