@@ -35,6 +35,13 @@ struct AppMenu {
         let replace = find.addItem(withTitle: "Find and Replace…", action: #selector(NSResponder.performTextFinderAction(_:)), keyEquivalent: "f")
         replace.keyEquivalentModifierMask = [.command, .option]
         replace.tag = NSTextFinder.Action.showReplaceInterface.rawValue
+        let view = submenu("View", in: bar)
+        let increase = view.addItem(withTitle: "Increase Text Size", action: #selector(TextPresentation.increaseTextSize(_:)), keyEquivalent: "+")
+        increase.target = TextPresentation.shared
+        let decrease = view.addItem(withTitle: "Decrease Text Size", action: #selector(TextPresentation.decreaseTextSize(_:)), keyEquivalent: "-")
+        decrease.target = TextPresentation.shared
+        let reset = view.addItem(withTitle: "Reset Text Size", action: #selector(TextPresentation.resetTextSize(_:)), keyEquivalent: "0")
+        reset.target = TextPresentation.shared
         let window = submenu("Window", in: bar)
         window.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
         NSApp.windowsMenu = window
