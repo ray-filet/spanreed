@@ -5,10 +5,15 @@ public struct ConfigError: Equatable, Sendable {
     public let message: String
 }
 
+public enum Appearance: String, CaseIterable, Sendable {
+    case system, light, dark
+}
+
 public struct ResolvedConfig: Equatable, Sendable {
     public var selectedFonts: [String] = ["SF Mono"]
     public var activeFont = "SF Mono"
     public var fontSize: Double = 20
+    public var appearance = Appearance.system
     public var effectiveFont = "SF Mono"
     public var unavailableFonts: [String] = []
     public var errors: [ConfigError] = []
@@ -18,11 +23,21 @@ public enum Config {
     /// Rewrites the last valid Active Font value, retaining all surrounding bytes.
     /// If every Active Font value is invalid, repairs the last one; if absent, appends it.
     public static func rewriteActiveFont(_ text: String, fontName: String) -> String {
+        rewriteValue(of: "active-font", in: text, to: fontName, isValid: isValidActiveFont)
+    }
+
+    /// Rewrites the last valid appearance value with the same byte-preserving rules as the Active Font.
+    public static func rewriteAppearance(_ text: String, appearance: Appearance) -> String {
+        rewriteValue(of: "appearance", in: text, to: appearance.rawValue) { Appearance(rawValue: String($0)) != nil }
+    }
+
+    private static func rewriteValue(of key: String, in text: String, to newValue: String,
+                                     isValid: (Substring) -> Bool) -> String {
         var replacementRange: Range<String.Index>?
         var invalidValueRange: Range<String.Index>?
-        for line in scanLines(text) where line.key == "active-font" {
+        for line in scanLines(text) where line.key == key {
             let range = line.value.startIndex..<line.value.endIndex
-            if isValidActiveFont(line.value) {
+            if isValid(line.value) {
                 replacementRange = range
             } else {
                 invalidValueRange = range
@@ -30,12 +45,12 @@ public enum Config {
         }
         if let replacementRange = replacementRange ?? invalidValueRange {
             var rewritten = text
-            rewritten.replaceSubrange(replacementRange, with: fontName)
+            rewritten.replaceSubrange(replacementRange, with: newValue)
             return rewritten
         }
         let newline = text.first(where: { $0.isNewline }).map(String.init) ?? "\n"
         let needsSeparator = !text.isEmpty && text != "\u{FEFF}" && text.last?.isNewline != true
-        return text + (needsSeparator ? newline : "") + "active-font = \(fontName)" + newline
+        return text + (needsSeparator ? newline : "") + "\(key) = \(newValue)" + newline
     }
 
     public static let defaultText = """
@@ -47,6 +62,9 @@ public enum Config {
 
     # Default text size in points. Command-0 returns to this size.
     font-size = 20
+
+    # Light or dark look: system (follow macOS), light, or dark.
+    appearance = system
 
     """
 
@@ -91,6 +109,12 @@ public enum Config {
                     continue
                 }
                 config.fontSize = size
+            case "appearance":
+                guard let appearance = Appearance(rawValue: String(value)) else {
+                    report("appearance must be system, light, or dark.")
+                    continue
+                }
+                config.appearance = appearance
             default:
                 report("Unknown key '\(key)'.")
             }

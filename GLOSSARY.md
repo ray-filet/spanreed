@@ -24,6 +24,10 @@ _Avoid_: Font list, available fonts, font families
 The one font from the Selected Fonts that every Note is currently displayed in.
 _Avoid_: Current font, chosen font
 
+**Appearance**:
+Whether Spanreed shows light or dark: Light, Dark, or System, which follows macOS. Chosen from View > Appearance and saved in the Config.
+_Avoid_: Theme, color scheme, mode
+
 **Untitled Note**:
 A Note that has never been saved to a file. Closing it asks whether to save it.
 _Avoid_: New document, draft, blank note

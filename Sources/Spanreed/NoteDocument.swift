@@ -144,9 +144,9 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
         Data(text.utf8)
     }
 
-    /// A font-menu rewrite updates this note independently of the disk Config,
+    /// A menu-driven Config rewrite updates this note independently of the disk Config,
     /// so other unsaved edits stay here until the user saves them.
-    func replaceConfigText(_ updatedText: String, savedText: String) {
+    func replaceConfigText(_ updatedText: String, savedText: String, actionName: String) {
         guard kind == .config else { return }
         savedConfigText = savedText
         if let editor, !text.utf8.elementsEqual(updatedText.utf8) {
@@ -174,7 +174,7 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
             editor.breakUndoCoalescing()
             guard editor.performValidatedReplacement(in: range, with: replacement) else { return }
             editor.breakUndoCoalescing()
-            editor.undoManager?.setActionName("Change Active Font")
+            editor.undoManager?.setActionName(actionName)
             let delta = replacementRange.length - range.length
             func adjusted(_ position: Int) -> Int {
                 if position <= range.location { return position }
