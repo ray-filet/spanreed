@@ -13,6 +13,16 @@ xcodebuild build -project Spanreed.xcodeproj -scheme Spanreed -destination 'plat
 xcodebuild test -project Spanreed.xcodeproj -scheme Spanreed -destination 'platform=macOS'
 ```
 
+To build and open the standalone Release app:
+
+```sh
+xcodebuild build -project Spanreed.xcodeproj -scheme Spanreed -configuration Release -destination 'platform=macOS' -derivedDataPath .build/release
+python3 scripts/check-app-launch.py .build/release/Build/Products/Release/Spanreed.app
+open .build/release/Build/Products/Release/Spanreed.app
+```
+
+The launch check copies the app to a temporary folder and runs it without Xcode's library search paths, using isolated Home Note, Config, and UserDefaults locations. It checks that the app creates its Home Note and stays open. Run this after changing framework or packaging settings, since a successful build or XCTest run can miss a broken standalone launch.
+
 `SpanreedCore` is a pure Swift framework. Its public Config behavior is tested in `Tests/SpanreedCoreTests`. App behavior is tested through XCUITest in `Tests/SpanreedUITests`; these tests always launch with temporary Home Note and Config folders.
 
 ## Isolated paths
