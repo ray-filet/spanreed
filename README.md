@@ -25,6 +25,10 @@ The launch check copies the app to a temporary folder and runs it without Xcode'
 
 `SpanreedCore` is a pure Swift framework. Its public Config behavior is tested in `Tests/SpanreedCoreTests`. App behavior is tested through XCUITest in `Tests/SpanreedUITests`; these tests always launch with temporary Home Note and Config folders.
 
+## Appearance
+
+Choose **View → Appearance → System, Light, or Dark**. The choice applies to all Note windows and is saved to Config as `appearance = system`, `appearance = light`, or `appearance = dark`. System follows the Mac's appearance. You can also edit `appearance` in Spanreed's Config window and save to apply it.
+
 ## Isolated paths
 
 Normal launches use `~/Documents/Spanreed/Home.txt` and `~/.config/spanreed/config`. For tests or isolated runs, set both folders with launch arguments:

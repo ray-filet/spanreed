@@ -44,9 +44,50 @@ final class SpanreedCoreTests: XCTestCase {
         XCTAssertEqual(config.selectedFonts, ["SF Mono"])
         XCTAssertEqual(config.activeFont, "SF Mono")
         XCTAssertEqual(config.fontSize, 20)
+        XCTAssertEqual(config.appearance, .system)
         XCTAssertEqual(config.effectiveFont, "SF Mono")
         XCTAssertEqual(config.unavailableFonts, [])
         XCTAssertEqual(config.errors, [])
+    }
+
+    func testAppearanceDefaultsAndValidValuesSurviveInvalidOverrides() {
+        for appearance in Appearance.allCases {
+            let config = Config.parse("appearance = \(appearance.rawValue)\n", installedFontNames: installedFonts)
+            XCTAssertEqual(config.appearance, appearance)
+            XCTAssertEqual(config.errors, [])
+        }
+        let config = Config.parse("appearance = light\nappearance = dark\nappearance = invalid\nappearance =\n", installedFontNames: installedFonts)
+        XCTAssertEqual(config.appearance, .dark)
+        XCTAssertEqual(config.errors.map(\.lineNumber), [3, 4])
+        let invalidOnly = Config.parse("appearance = invalid", installedFontNames: installedFonts)
+        XCTAssertEqual(invalidOnly.appearance, .system)
+        XCTAssertEqual(invalidOnly.errors.map(\.lineNumber), [1])
+    }
+
+    func testAppearanceRewritePreservesBytesAndUpdatesTheLastValidDuplicate() {
+        let original = "\u{FEFF}# Café 日本\r\nappearance = system\r\n  appearance\t= light  \r\nappearance = invalid\r\nfont-size = 20.0\n"
+        let expected = "\u{FEFF}# Café 日本\r\nappearance = system\r\n  appearance\t= dark  \r\nappearance = invalid\r\nfont-size = 20.0\n"
+        let rewritten = Config.rewriteAppearance(original, appearance: .dark)
+        XCTAssertEqual(Data(rewritten.utf8), Data(expected.utf8))
+        XCTAssertEqual(Config.parse(rewritten, installedFontNames: installedFonts).appearance, .dark)
+    }
+
+    func testAppearanceRewriteAppendsMissingKeysAndRepairsInvalidValues() {
+        let examples = [
+            ("", "appearance = dark\n"),
+            ("\u{FEFF}", "\u{FEFF}appearance = dark\n"),
+            ("font-size = 20", "font-size = 20\nappearance = dark\n"),
+            ("# My Config\r\nfont-size = 20\r\n", "# My Config\r\nfont-size = 20\r\nappearance = dark\r\n"),
+            ("appearance\t=   \r\n", "appearance\t=   dark\r\n"),
+            ("appearance = invalid\n", "appearance = dark\n")
+        ]
+        for (original, expected) in examples {
+            let rewritten = Config.rewriteAppearance(original, appearance: .dark)
+            XCTAssertEqual(Data(rewritten.utf8), Data(expected.utf8))
+            let config = Config.parse(rewritten, installedFontNames: installedFonts)
+            XCTAssertEqual(config.appearance, .dark)
+            XCTAssertEqual(config.errors, [])
+        }
     }
     func testValidSettingsIgnoreCommentsAndBlankLines() {
         let text = """

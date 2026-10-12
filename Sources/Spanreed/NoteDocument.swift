@@ -132,6 +132,8 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
                     self.savedConfigText = (try? Configuration.shared.readText()) ?? self.text
                     self.synchronizeConfigChangeCount()
                 }
+                // AppKit updated the title before this Note's kind changed.
+                self.windowControllers.forEach { $0.synchronizeWindowTitleWithDocumentName() }
             }
             completionHandler(error)
             if error == nil, destinationKind == .config {
