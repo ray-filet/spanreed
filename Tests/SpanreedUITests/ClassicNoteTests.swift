@@ -87,6 +87,25 @@ final class ClassicNoteTests: XCTestCase {
         XCTAssertFalse(application.sheets.firstMatch.exists)
     }
 
+    func testShiftTabOutdentsOpenedNoteOnlyWhenSaved() throws {
+        let url = testFolder.appendingPathComponent("Indented note.txt")
+        let original = "\tFirst\n    Second"
+        let expected = "First\nSecond"
+        try original.write(to: url, atomically: true, encoding: .utf8)
+        application.launch()
+        try openNote(url)
+        let editor = application.windows[url.lastPathComponent].textViews["note-editor"]
+        application.typeKey("a", modifierFlags: .command)
+        application.typeKey(.tab, modifierFlags: .shift)
+        XCTAssertEqual(editor.value as? String, expected)
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), original)
+        application.typeKey("s", modifierFlags: .command)
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), expected)
+        application.typeKey("w", modifierFlags: .command)
+        XCTAssertFalse(application.windows[url.lastPathComponent].exists)
+        XCTAssertFalse(application.sheets.firstMatch.exists)
+    }
+
     func testOpenAcceptsTextMarkdownAndLogNotesWithNonASCIIText() throws {
         application.launch()
         for ext in ["txt", "md", "log"] {

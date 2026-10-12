@@ -23,7 +23,11 @@ open .build/release/Build/Products/Release/Spanreed.app
 
 The launch check copies the app to a temporary folder and runs it without Xcode's library search paths, using isolated Home Note, Config, and UserDefaults locations. It checks that the app creates its Home Note and stays open. Run this after changing framework or packaging settings, since a successful build or XCTest run can miss a broken standalone launch.
 
-`SpanreedCore` is a pure Swift framework. Its public Config behavior is tested in `Tests/SpanreedCoreTests`. App behavior is tested through XCUITest in `Tests/SpanreedUITests`; these tests always launch with temporary Home Note and Config folders.
+`SpanreedCore` is a pure Swift framework. Its public Config and indentation behavior is tested in `Tests/SpanreedCoreTests`. App behavior is tested through XCUITest in `Tests/SpanreedUITests`; these tests always launch with temporary Home Note and Config folders.
+
+## Indentation
+
+Tab inserts a tab at the caret. Shift+Tab outdents the current line or all selected lines by one level, removing one leading tab or up to four leading spaces. It keeps the caret or selection in place relative to the text and supports Undo and Redo.
 
 ## Appearance
 

@@ -1,4 +1,5 @@
 import AppKit
+import SpanreedCore
 
 class NoteDocument: NSDocument, NSTextViewDelegate {
     enum Kind { case home, standard, config }
@@ -213,6 +214,19 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
                 presentError(error)
             }
         }
+    }
+
+    func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        guard commandSelector == #selector(NSTextView.insertBacktab(_:)) else { return false }
+        guard let edit = NoteIndentation.outdent(textView.string, selection: textView.selectedRange()) else { return true }
+        textView.breakUndoCoalescing()
+        let replacement = NSAttributedString(string: edit.replacement, attributes: textView.typingAttributes)
+        if textView.performValidatedReplacement(in: edit.range, with: replacement) {
+            textView.setSelectedRange(edit.selection)
+            textView.undoManager?.setActionName("Outdent")
+        }
+        textView.breakUndoCoalescing()
+        return true
     }
 
     func textView(_ textView: NSTextView, menu: NSMenu, for event: NSEvent, at charIndex: Int) -> NSMenu? {
