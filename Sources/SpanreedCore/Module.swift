@@ -15,6 +15,36 @@ public struct ResolvedConfig: Equatable, Sendable {
 }
 
 public enum Config {
+    /// Rewrites the last valid Active Font value, retaining all surrounding bytes.
+    /// If every Active Font value is invalid, repairs the last one; if absent, appends it.
+    public static func rewriteActiveFont(_ text: String, fontName: String) -> String {
+        var replacementRange: Range<String.Index>?
+        var invalidValueRange: Range<String.Index>?
+        for rawLine in text.split(omittingEmptySubsequences: false, whereSeparator: { $0.isNewline }) {
+            let line = rawLine.startIndex == text.startIndex && rawLine.hasPrefix("\u{FEFF}")
+                ? rawLine.dropFirst() : rawLine
+            guard let separator = line.firstIndex(of: "="),
+                  line[..<separator].trimmingCharacters(in: .whitespaces) == "active-font" else { continue }
+            let value = line[line.index(after: separator)...]
+            let trimmedValue = value.trimmingCharacters(in: .whitespaces)
+            let start = value.rangeOfCharacter(from: .whitespaces.inverted)?.lowerBound ?? value.endIndex
+            let end = value.rangeOfCharacter(from: .whitespaces.inverted, options: .backwards)?.upperBound ?? value.endIndex
+            if !trimmedValue.isEmpty, !trimmedValue.contains("=") {
+                replacementRange = start..<end
+            } else {
+                invalidValueRange = start..<end
+            }
+        }
+        if let replacementRange = replacementRange ?? invalidValueRange {
+            var rewritten = text
+            rewritten.replaceSubrange(replacementRange, with: fontName)
+            return rewritten
+        }
+        let newline = text.first(where: { $0.isNewline }).map(String.init) ?? "\n"
+        let needsSeparator = !text.isEmpty && text != "\u{FEFF}" && text.last?.isNewline != true
+        return text + (needsSeparator ? newline : "") + "active-font = \(fontName)" + newline
+    }
+
     public static let defaultText = """
     # Font families shown in the font menus, separated by commas.
     selected-fonts = SF Mono
