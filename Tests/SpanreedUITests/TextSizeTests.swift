@@ -39,7 +39,7 @@ final class TextSizeTests: XCTestCase {
         application.typeKey("n", modifierFlags: .command)
         let untitledEditor = application.windows["Untitled"].textViews["note-editor"]
         XCTAssertTrue(untitledEditor.waitForExistence(timeout: 5))
-        paste(noteText)
+        application.pasteText(noteText)
         XCTAssertEqual(untitledEditor.frame.height, defaultHeight, accuracy: 1)
 
         application.menuBars.menuBarItems["View"].click()
@@ -96,23 +96,5 @@ final class TextSizeTests: XCTestCase {
         application.launch()
         XCTAssertTrue(application.textViews["note-editor"].waitForExistence(timeout: 5))
         XCTAssertEqual(application.textViews["note-editor"].frame.height, defaultHeight, accuracy: 1)
-    }
-
-    private func paste(_ text: String) {
-        let pasteboard = NSPasteboard.general
-        let previousItems = pasteboard.pasteboardItems?.map { original -> NSPasteboardItem in
-            let copy = NSPasteboardItem()
-            for type in original.types {
-                if let data = original.data(forType: type) { copy.setData(data, forType: type) }
-            }
-            return copy
-        } ?? []
-        defer {
-            pasteboard.clearContents()
-            pasteboard.writeObjects(previousItems)
-        }
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-        application.typeKey("v", modifierFlags: .command)
     }
 }

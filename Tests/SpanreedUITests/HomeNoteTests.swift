@@ -105,24 +105,13 @@ final class HomeNoteTests: XCTestCase {
         let editor = application.textViews["note-editor"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         let longText = String(repeating: "A long plain text line ", count: 120)
-        let pasteboard = NSPasteboard.general
-        let previousItems = pasteboard.pasteboardItems?.map { original -> NSPasteboardItem in
-            let copy = NSPasteboardItem()
-            for type in original.types {
-                if let data = original.data(forType: type) { copy.setData(data, forType: type) }
-            }
-            return copy
-        } ?? []
-        defer {
-            pasteboard.clearContents()
-            pasteboard.writeObjects(previousItems)
+        withPreservedPasteboard { pasteboard in
+            let formattedItem = NSPasteboardItem()
+            formattedItem.setString(longText, forType: .string)
+            formattedItem.setData(Data("{\\rtf1\\ansi\\b \(longText)\\b0}".utf8), forType: .rtf)
+            pasteboard.writeObjects([formattedItem])
+            application.typeKey("v", modifierFlags: .command)
         }
-        let formattedItem = NSPasteboardItem()
-        formattedItem.setString(longText, forType: .string)
-        formattedItem.setData(Data("{\\rtf1\\ansi\\b \(longText)\\b0}".utf8), forType: .rtf)
-        pasteboard.clearContents()
-        pasteboard.writeObjects([formattedItem])
-        application.typeKey("v", modifierFlags: .command)
         XCTAssertEqual(editor.value as? String, longText)
         XCTAssertEqual(try String(contentsOf: homeNoteURL, encoding: .utf8), longText)
         XCTAssertGreaterThan(editor.frame.height, application.windows.firstMatch.frame.height)

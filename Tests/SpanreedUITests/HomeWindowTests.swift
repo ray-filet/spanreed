@@ -39,6 +39,23 @@ final class HomeWindowTests: XCTestCase {
         application.typeKey(.escape, modifierFlags: [])
     }
 
+    func testNotesAndConfigStayInSeparateWindowsWhenMacOSPrefersTabs() throws {
+        application.launchArguments += ["-AppleWindowTabbingMode", "always"]
+        application.launch()
+        XCTAssertTrue(application.windows["Home Note"].waitForExistence(timeout: 5))
+        application.typeKey("n", modifierFlags: .command)
+        application.typeKey("n", modifierFlags: .command)
+        application.typeKey(",", modifierFlags: .command)
+        XCTAssertTrue(application.windows["Config"].textViews["note-editor"].waitForExistence(timeout: 5))
+        XCTAssertEqual(application.windows.count, 4, application.debugDescription)
+        XCTAssertEqual(application.tabGroups.count, 0, application.debugDescription)
+        application.typeKey("w", modifierFlags: .command)
+        XCTAssertEqual(application.windows.count, 3)
+        application.typeKey("1", modifierFlags: .command)
+        application.typeText("Home remains a separate note")
+        XCTAssertTrue(waitForFile(homeNoteURL, containing: "Home remains a separate note"))
+    }
+
     func testCommandOneBringsExistingHomeNoteInFrontWithoutDuplicatingIt() throws {
         application.launch()
         XCTAssertTrue(application.textViews["note-editor"].waitForExistence(timeout: 5))
@@ -134,6 +151,91 @@ final class HomeWindowTests: XCTestCase {
                        "Saved snapshot and more Home text")
     }
 
+    func testSavingUntitledNoteAsHomeKeepsItsTextAndWindowFrameAfterRelaunch() throws {
+        application.launch()
+        XCTAssertTrue(application.windows["Home Note"].waitForExistence(timeout: 5))
+        application.typeKey("w", modifierFlags: .command)
+        application.typeKey("n", modifierFlags: .command)
+        let untitled = application.windows.matching(NSPredicate(format: "title BEGINSWITH %@", "Untitled")).firstMatch
+        XCTAssertTrue(untitled.waitForExistence(timeout: 5))
+        application.typeText("This becomes the Home Note")
+        saveAsHome(from: untitled)
+        XCTAssertTrue(waitForFile(homeNoteURL, containing: "This becomes the Home Note"))
+        application.typeKey("1", modifierFlags: .command)
+        XCTAssertEqual(application.windows.count, 1)
+        let home = application.windows["Home Note"]
+        XCTAssertTrue(home.waitForExistence(timeout: 5))
+        application.typeKey(.downArrow, modifierFlags: .command)
+        application.typeText(" and keeps autosaving")
+        let expectedText = "This becomes the Home Note and keeps autosaving"
+        XCTAssertTrue(waitForFile(homeNoteURL, containing: expectedText))
+        let originalFrame = home.frame
+        let titleBar = home.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
+            .withOffset(CGVector(dx: 0, dy: 14))
+        titleBar.click(forDuration: 0.2, thenDragTo: titleBar.withOffset(CGVector(dx: 45, dy: 40)))
+        let resizeCorner = home.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 1))
+            .withOffset(CGVector(dx: -2, dy: -2))
+        resizeCorner.click(forDuration: 0.2, thenDragTo: resizeCorner.withOffset(CGVector(dx: -90, dy: -70)))
+        let changedFrame = home.frame
+        XCTAssertGreaterThan(abs(changedFrame.minX - originalFrame.minX), 20)
+        XCTAssertGreaterThan(abs(changedFrame.minY - originalFrame.minY), 20)
+        XCTAssertGreaterThan(abs(changedFrame.width - originalFrame.width), 40)
+        XCTAssertGreaterThan(abs(changedFrame.height - originalFrame.height), 40)
+        application.typeKey("q", modifierFlags: .command)
+        XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
+        application.launch()
+        XCTAssertTrue(home.waitForExistence(timeout: 5))
+        XCTAssertEqual(home.textViews["note-editor"].value as? String, expectedText)
+        XCTAssertEqual(home.frame.minX, changedFrame.minX, accuracy: 1)
+        XCTAssertEqual(home.frame.minY, changedFrame.minY, accuracy: 1)
+        XCTAssertEqual(home.frame.width, changedFrame.width, accuracy: 1)
+        XCTAssertEqual(home.frame.height, changedFrame.height, accuracy: 1)
+    }
+
+    func testSavingConfigAsHomeKeepsConfigAndPersistsTheHomeWindowFrame() throws {
+        application.launch()
+        XCTAssertTrue(application.windows["Home Note"].waitForExistence(timeout: 5))
+        application.typeKey("w", modifierFlags: .command)
+        application.typeKey(",", modifierFlags: .command)
+        let config = application.windows["Config"]
+        XCTAssertTrue(config.textViews["note-editor"].waitForExistence(timeout: 5))
+        let configURL = testFolder.appendingPathComponent("Config/config")
+        let originalConfig = try Data(contentsOf: configURL)
+        application.typeKey(.downArrow, modifierFlags: .command)
+        application.typeText("# This becomes Home text")
+        let expectedText = try XCTUnwrap(config.textViews["note-editor"].value as? String)
+        saveAsHome(from: config)
+        XCTAssertTrue(waitForFile(homeNoteURL, containing: expectedText))
+        application.typeKey("1", modifierFlags: .command)
+        XCTAssertEqual(application.windows.count, 1)
+        let home = application.windows["Home Note"]
+        XCTAssertTrue(home.waitForExistence(timeout: 5))
+        application.typeKey(.downArrow, modifierFlags: .command)
+        application.typeText(" and autosaves")
+        XCTAssertTrue(waitForFile(homeNoteURL, containing: expectedText + " and autosaves"))
+        let originalFrame = home.frame
+        let titleBar = home.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
+            .withOffset(CGVector(dx: 0, dy: 14))
+        titleBar.click(forDuration: 0.2, thenDragTo: titleBar.withOffset(CGVector(dx: 45, dy: 40)))
+        let changedFrame = home.frame
+        XCTAssertGreaterThan(abs(changedFrame.minX - originalFrame.minX), 20)
+        XCTAssertGreaterThan(abs(changedFrame.minY - originalFrame.minY), 20)
+        application.typeKey(",", modifierFlags: .command)
+        XCTAssertTrue(config.textViews["note-editor"].waitForExistence(timeout: 5))
+        XCTAssertEqual(config.textViews["note-editor"].value as? String, String(decoding: originalConfig, as: UTF8.self))
+        XCTAssertEqual(try Data(contentsOf: configURL), originalConfig)
+        XCTAssertEqual(application.windows.count, 2)
+        application.typeKey("q", modifierFlags: .command)
+        XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
+        application.launch()
+        XCTAssertTrue(home.waitForExistence(timeout: 5))
+        XCTAssertEqual(home.textViews["note-editor"].value as? String, expectedText + " and autosaves")
+        XCTAssertEqual(home.frame.minX, changedFrame.minX, accuracy: 1)
+        XCTAssertEqual(home.frame.minY, changedFrame.minY, accuracy: 1)
+        XCTAssertEqual(home.frame.width, changedFrame.width, accuracy: 1)
+        XCTAssertEqual(home.frame.height, changedFrame.height, accuracy: 1)
+    }
+
     func testOpeningClosedHomeNoteThroughFileMenuRetainsHomeBehavior() throws {
         application.launch()
         XCTAssertTrue(application.textViews["note-editor"].waitForExistence(timeout: 5))
@@ -162,6 +264,24 @@ final class HomeWindowTests: XCTestCase {
             (try? String(contentsOf: url, encoding: .utf8)) == text
         }, object: nil)
         return XCTWaiter.wait(for: [saved], timeout: 5) == .completed
+    }
+
+    private func saveAsHome(from note: XCUIElement) {
+        application.typeKey("s", modifierFlags: [.command, .shift])
+        let savePanel = note.sheets.firstMatch
+        XCTAssertTrue(savePanel.waitForExistence(timeout: 5))
+        application.typeKey("g", modifierFlags: [.command, .shift])
+        application.typeKey("a", modifierFlags: .command)
+        application.typeText(homeNoteURL.deletingLastPathComponent().path)
+        application.typeKey(.return, modifierFlags: [])
+        let filename = savePanel.textFields["saveAsNameTextField"]
+        filename.click()
+        application.typeKey("a", modifierFlags: .command)
+        filename.typeText(homeNoteURL.lastPathComponent)
+        savePanel.buttons["OKButton"].click()
+        let replace = savePanel.buttons["Replace"]
+        XCTAssertTrue(replace.waitForExistence(timeout: 5))
+        replace.click()
     }
 
     private var homeNoteURL: URL { testFolder.appendingPathComponent("Home/Home.txt") }
