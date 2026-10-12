@@ -101,27 +101,13 @@ final class HomeWindowTests: XCTestCase {
         application.launch()
         let homeWindow = application.windows["Home Note"]
         XCTAssertTrue(homeWindow.waitForExistence(timeout: 5))
-        let originalFrame = homeWindow.frame
-        let titleBar = homeWindow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
-            .withOffset(CGVector(dx: 0, dy: 14))
-        titleBar.click(forDuration: 0.2, thenDragTo: titleBar.withOffset(CGVector(dx: 45, dy: 40)))
-        let resizeCorner = homeWindow.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 1))
-            .withOffset(CGVector(dx: -2, dy: -2))
-        resizeCorner.click(forDuration: 0.2, thenDragTo: resizeCorner.withOffset(CGVector(dx: -90, dy: -70)))
-        let changedFrame = homeWindow.frame
-        XCTAssertGreaterThan(abs(changedFrame.minX - originalFrame.minX), 20)
-        XCTAssertGreaterThan(abs(changedFrame.minY - originalFrame.minY), 20)
-        XCTAssertGreaterThan(abs(changedFrame.width - originalFrame.width), 40)
-        XCTAssertGreaterThan(abs(changedFrame.height - originalFrame.height), 40)
+        moveWindow(homeWindow)
+        let changedFrame = resizeWindow(homeWindow)
         application.typeKey("q", modifierFlags: .command)
         XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
         application.launch()
         XCTAssertTrue(homeWindow.waitForExistence(timeout: 5))
-        let restoredFrame = homeWindow.frame
-        XCTAssertEqual(restoredFrame.minX, changedFrame.minX, accuracy: 1)
-        XCTAssertEqual(restoredFrame.minY, changedFrame.minY, accuracy: 1)
-        XCTAssertEqual(restoredFrame.width, changedFrame.width, accuracy: 1)
-        XCTAssertEqual(restoredFrame.height, changedFrame.height, accuracy: 1)
+        assertFrame(homeWindow.frame, matches: changedFrame)
     }
 
     func testHomeNoteSaveAsWritesSnapshotAndKeepsAutosavingOriginal() throws {
@@ -169,27 +155,14 @@ final class HomeWindowTests: XCTestCase {
         application.typeText(" and keeps autosaving")
         let expectedText = "This becomes the Home Note and keeps autosaving"
         XCTAssertTrue(waitForFile(homeNoteURL, containing: expectedText))
-        let originalFrame = home.frame
-        let titleBar = home.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
-            .withOffset(CGVector(dx: 0, dy: 14))
-        titleBar.click(forDuration: 0.2, thenDragTo: titleBar.withOffset(CGVector(dx: 45, dy: 40)))
-        let resizeCorner = home.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 1))
-            .withOffset(CGVector(dx: -2, dy: -2))
-        resizeCorner.click(forDuration: 0.2, thenDragTo: resizeCorner.withOffset(CGVector(dx: -90, dy: -70)))
-        let changedFrame = home.frame
-        XCTAssertGreaterThan(abs(changedFrame.minX - originalFrame.minX), 20)
-        XCTAssertGreaterThan(abs(changedFrame.minY - originalFrame.minY), 20)
-        XCTAssertGreaterThan(abs(changedFrame.width - originalFrame.width), 40)
-        XCTAssertGreaterThan(abs(changedFrame.height - originalFrame.height), 40)
+        moveWindow(home)
+        let changedFrame = resizeWindow(home)
         application.typeKey("q", modifierFlags: .command)
         XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
         application.launch()
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         XCTAssertEqual(home.textViews["note-editor"].value as? String, expectedText)
-        XCTAssertEqual(home.frame.minX, changedFrame.minX, accuracy: 1)
-        XCTAssertEqual(home.frame.minY, changedFrame.minY, accuracy: 1)
-        XCTAssertEqual(home.frame.width, changedFrame.width, accuracy: 1)
-        XCTAssertEqual(home.frame.height, changedFrame.height, accuracy: 1)
+        assertFrame(home.frame, matches: changedFrame)
     }
 
     func testSavingConfigAsHomeKeepsConfigAndPersistsTheHomeWindowFrame() throws {
@@ -213,13 +186,7 @@ final class HomeWindowTests: XCTestCase {
         application.typeKey(.downArrow, modifierFlags: .command)
         application.typeText(" and autosaves")
         XCTAssertTrue(waitForFile(homeNoteURL, containing: expectedText + " and autosaves"))
-        let originalFrame = home.frame
-        let titleBar = home.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
-            .withOffset(CGVector(dx: 0, dy: 14))
-        titleBar.click(forDuration: 0.2, thenDragTo: titleBar.withOffset(CGVector(dx: 45, dy: 40)))
-        let changedFrame = home.frame
-        XCTAssertGreaterThan(abs(changedFrame.minX - originalFrame.minX), 20)
-        XCTAssertGreaterThan(abs(changedFrame.minY - originalFrame.minY), 20)
+        let changedFrame = moveWindow(home)
         application.typeKey(",", modifierFlags: .command)
         XCTAssertTrue(config.textViews["note-editor"].waitForExistence(timeout: 5))
         XCTAssertEqual(config.textViews["note-editor"].value as? String, String(decoding: originalConfig, as: UTF8.self))
@@ -230,10 +197,7 @@ final class HomeWindowTests: XCTestCase {
         application.launch()
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         XCTAssertEqual(home.textViews["note-editor"].value as? String, expectedText + " and autosaves")
-        XCTAssertEqual(home.frame.minX, changedFrame.minX, accuracy: 1)
-        XCTAssertEqual(home.frame.minY, changedFrame.minY, accuracy: 1)
-        XCTAssertEqual(home.frame.width, changedFrame.width, accuracy: 1)
-        XCTAssertEqual(home.frame.height, changedFrame.height, accuracy: 1)
+        assertFrame(home.frame, matches: changedFrame)
     }
 
     func testOpeningClosedHomeNoteThroughFileMenuRetainsHomeBehavior() throws {
@@ -264,6 +228,37 @@ final class HomeWindowTests: XCTestCase {
             (try? String(contentsOf: url, encoding: .utf8)) == text
         }, object: nil)
         return XCTWaiter.wait(for: [saved], timeout: 5) == .completed
+    }
+
+    @discardableResult
+    private func moveWindow(_ window: XCUIElement, file: StaticString = #filePath, line: UInt = #line) -> CGRect {
+        let originalFrame = window.frame
+        let titleBar = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
+            .withOffset(CGVector(dx: 0, dy: 14))
+        titleBar.click(forDuration: 0.2, thenDragTo: titleBar.withOffset(CGVector(dx: 45, dy: 40)))
+        let changedFrame = window.frame
+        XCTAssertGreaterThan(abs(changedFrame.minX - originalFrame.minX), 20, file: file, line: line)
+        XCTAssertGreaterThan(abs(changedFrame.minY - originalFrame.minY), 20, file: file, line: line)
+        return changedFrame
+    }
+
+    private func resizeWindow(_ window: XCUIElement, file: StaticString = #filePath, line: UInt = #line) -> CGRect {
+        let originalFrame = window.frame
+        let resizeCorner = window.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 1))
+            .withOffset(CGVector(dx: -2, dy: -2))
+        resizeCorner.click(forDuration: 0.2, thenDragTo: resizeCorner.withOffset(CGVector(dx: -90, dy: -70)))
+        let changedFrame = window.frame
+        XCTAssertGreaterThan(abs(changedFrame.width - originalFrame.width), 40, file: file, line: line)
+        XCTAssertGreaterThan(abs(changedFrame.height - originalFrame.height), 40, file: file, line: line)
+        return changedFrame
+    }
+
+    private func assertFrame(_ actual: CGRect, matches expected: CGRect,
+                             file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(actual.minX, expected.minX, accuracy: 1, file: file, line: line)
+        XCTAssertEqual(actual.minY, expected.minY, accuracy: 1, file: file, line: line)
+        XCTAssertEqual(actual.width, expected.width, accuracy: 1, file: file, line: line)
+        XCTAssertEqual(actual.height, expected.height, accuracy: 1, file: file, line: line)
     }
 
     private func saveAsHome(from note: XCUIElement) {
