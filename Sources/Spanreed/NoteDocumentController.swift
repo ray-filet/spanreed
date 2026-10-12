@@ -44,7 +44,7 @@ final class NoteDocumentController: NSDocumentController, NSMenuDelegate {
         do {
             try FileManager.default.createDirectory(at: paths.configFolder, withIntermediateDirectories: true)
             if !FileManager.default.fileExists(atPath: paths.configURL.path) {
-                try Data(Config.defaultText.utf8).write(to: paths.configURL, options: .atomic)
+                try Data(Config.makeDefaultText(selectedFonts: Configuration.defaultFonts).utf8).write(to: paths.configURL, options: .atomic)
             }
             openDocument(withContentsOf: paths.configURL, display: true) { _, _, error in
                 if let error { NSApp.presentError(error) }

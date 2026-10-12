@@ -16,6 +16,21 @@ final class SpanreedCoreTests: XCTestCase {
         XCTAssertEqual(config.errors, [])
     }
 
+    func testDefaultFontsFillOnlyAnAbsentSelectedFontsSetting() {
+        let fonts = ["SF Mono", "Andale Mono", "Menlo"]
+        let fresh = Config.addingMissingSettings(to: "", defaultFonts: fonts)
+        XCTAssertEqual(fresh, Config.makeDefaultText(selectedFonts: fonts))
+        let config = Config.parse(fresh, installedFontNames: installedFonts.union(["Andale Mono"]))
+        XCTAssertEqual(config.selectedFonts, fonts)
+        XCTAssertEqual(config.activeFont, "SF Mono")
+        XCTAssertEqual(config.errors, [])
+        let filled = Config.addingMissingSettings(to: "font-size = 24\n", defaultFonts: fonts)
+        XCTAssertTrue(filled.contains("selected-fonts = SF Mono, Andale Mono, Menlo\n"))
+        let explicit = "selected-fonts = Arial\nactive-font = Arial\n"
+        XCTAssertTrue(Config.addingMissingSettings(to: explicit, defaultFonts: fonts).hasPrefix(explicit))
+        XCTAssertFalse(Config.addingMissingSettings(to: explicit, defaultFonts: fonts).contains("Andale Mono"))
+    }
+
     func testEverySupportedSettingIsFilledWhenMissing() {
         let expected = Config.parse(Config.defaultText, installedFontNames: installedFonts)
         for setting in ["selected-fonts = SF Mono", "active-font = SF Mono", "font-size = 20",

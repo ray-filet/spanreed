@@ -103,7 +103,7 @@ final class AppearanceTests: XCTestCase {
         assertBackground(of: home, near: 1.0)
         application.typeKey(",", modifierFlags: .command)
         chooseAppearance("System")
-        let expected = "appearance = system\nselected-fonts = SF Mono\nactive-font = SF Mono\nfont-size = 20\ncurrent-text-size = 20.0\n"
+        let expected = "appearance = system\nselected-fonts = \(Self.defaultFontsValue)\nactive-font = SF Mono\nfont-size = 20\ncurrent-text-size = 20.0\n"
         XCTAssertEqual(editor.value as? String, expected)
         XCTAssertEqual(try String(contentsOf: configURL, encoding: .utf8), expected)
         application.typeKey("w", modifierFlags: .command)
