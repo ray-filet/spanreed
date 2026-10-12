@@ -59,7 +59,7 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
         textView.isAutomaticLinkDetectionEnabled = false
         textView.isAutomaticDataDetectionEnabled = false
         textView.isAutomaticTextCompletionEnabled = false
-        textView.font = .monospacedSystemFont(ofSize: 20, weight: .regular)
+        textView.font = TextPresentation.shared.font
         textView.string = text
         textView.delegate = self
         textView.setAccessibilityIdentifier("note-editor")
