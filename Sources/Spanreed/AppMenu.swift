@@ -13,6 +13,8 @@ struct AppMenu {
         let file = submenu("File", in: bar)
         file.addItem(withTitle: "New", action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n")
         file.addItem(withTitle: "Open…", action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o")
+        let recent = submenu("Open Recent", in: file)
+        recent.delegate = NSDocumentController.shared as? NoteDocumentController
         file.addItem(.separator())
         file.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         file.addItem(withTitle: "Save", action: #selector(NSDocument.save(_:)), keyEquivalent: "s")
