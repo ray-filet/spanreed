@@ -28,8 +28,7 @@ final class TextSizeTests: XCTestCase {
     func testZoomShortcutsAndMenusChangeEveryOpenNote() throws {
         application.launch()
         XCTAssertTrue(application.textViews["note-editor"].waitForExistence(timeout: 5))
-        let homeEditor = application.windows.matching(NSPredicate(format: "title == %@ OR title == %@", "Home.txt", "Home Note"))
-            .firstMatch.textViews["note-editor"]
+        let homeEditor = application.windows["home"].textViews["note-editor"]
         let defaultHeight = homeEditor.frame.height
         let defaultScreenshot = XCTAttachment(screenshot: application.screenshot())
         defaultScreenshot.name = "Default SF Mono at 20 points"

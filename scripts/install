@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Builds the Release app, checks it launches standalone, and installs it as
+# /Applications/Spanreed.app, replacing any previous copy.
+#
+#   scripts/install
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+built_app="$repo_root/.build/release/Build/Products/Release/Spanreed.app"
+installed_app="/Applications/Spanreed.app"
+
+cd "$repo_root"
+xcodebuild build -project Spanreed.xcodeproj -scheme Spanreed -configuration Release \
+  -destination 'platform=macOS' -derivedDataPath .build/release -quiet
+python3 scripts/check-app-launch.py "$built_app"
+
+if pgrep -x Spanreed >/dev/null; then
+  osascript -e 'tell application "Spanreed" to quit'
+  while pgrep -x Spanreed >/dev/null; do sleep 0.2; done
+fi
+
+rm -rf "$installed_app"
+ditto "$built_app" "$installed_app"
+echo "install: Spanreed installed at $installed_app"

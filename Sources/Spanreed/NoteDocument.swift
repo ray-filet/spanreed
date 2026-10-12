@@ -11,7 +11,7 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
     override var displayName: String! {
         get {
             switch kind {
-            case .home: return "Home Note"
+            case .home: return "home"
             case .config: return "Config"
             case .standard: return super.displayName
             }
@@ -92,7 +92,7 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
         editor = textView
         addWindowController(NoteWindowController(window: window, defaults: AppPaths.current.defaults,
                                                  restoreHomeFrame: kind == .home))
-        if kind == .home { window.title = "Home Note" }
+        if kind == .home { window.title = displayName }
         window.makeFirstResponder(textView)
     }
 

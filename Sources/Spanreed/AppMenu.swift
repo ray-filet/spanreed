@@ -50,7 +50,7 @@ struct AppMenu {
         let reset = view.addItem(withTitle: "Reset Text Size", action: #selector(TextPresentation.resetTextSize(_:)), keyEquivalent: "0")
         reset.target = TextPresentation.shared
         let window = submenu("Window", in: bar)
-        let home = window.addItem(withTitle: "Home Note", action: #selector(NoteDocumentController.openHomeNote(_:)), keyEquivalent: "1")
+        let home = window.addItem(withTitle: "home", action: #selector(NoteDocumentController.openHomeNote(_:)), keyEquivalent: "1")
         home.target = NSDocumentController.shared
         window.addItem(.separator())
         window.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")

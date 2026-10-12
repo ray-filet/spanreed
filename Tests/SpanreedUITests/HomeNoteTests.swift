@@ -24,7 +24,7 @@ final class HomeNoteTests: XCTestCase {
 
     func testFirstLaunchCreatesHomeNoteAndFocusesEditor() throws {
         application.launch()
-        let editor = application.textViews["note-editor"]
+        let editor = application.windows["home"].textViews["note-editor"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         XCTAssertEqual(application.windows.count, 1)
         XCTAssertTrue(FileManager.default.fileExists(atPath: homeNoteURL.path))

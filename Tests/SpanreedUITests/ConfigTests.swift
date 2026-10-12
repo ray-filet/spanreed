@@ -28,7 +28,7 @@ final class ConfigTests: XCTestCase {
 
     func testCommandCommaCreatesCommentedConfigAndReusesItsWindow() throws {
         application.launch()
-        XCTAssertTrue(application.windows["Home Note"].textViews["note-editor"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
         application.typeKey(",", modifierFlags: .command)
         let config = application.windows["Config"]
         let editor = config.textViews["note-editor"]
@@ -58,7 +58,7 @@ final class ConfigTests: XCTestCase {
 
     func testSavingConfigAppliesFontSizeToEveryNoteAndResetUsesIt() throws {
         application.launch()
-        let home = application.windows["Home Note"].textViews["note-editor"]
+        let home = application.windows["home"].textViews["note-editor"]
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         let defaultHeight = home.frame.height
         application.typeKey(",", modifierFlags: .command)
@@ -91,7 +91,7 @@ final class ConfigTests: XCTestCase {
 
     func testSavingBadConfigShowsOneAlertListingEveryBadLine() throws {
         application.launch()
-        XCTAssertTrue(application.windows["Home Note"].textViews["note-editor"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
         application.typeKey(",", modifierFlags: .command)
         XCTAssertTrue(application.windows["Config"].textViews["note-editor"].waitForExistence(timeout: 5))
         application.typeKey("a", modifierFlags: .command)
@@ -105,13 +105,13 @@ final class ConfigTests: XCTestCase {
         XCTAssertTrue(message.contains("Line 2"), message)
         application.typeKey(.return, modifierFlags: [])
         XCTAssertFalse(application.dialogs.firstMatch.exists)
-        XCTAssertTrue(application.windows["Home Note"].exists)
+        XCTAssertTrue(application.windows["home"].exists)
         XCTAssertTrue(application.windows["Config"].exists)
     }
 
     func testBrokenConfigStillLaunchesHomeNoteWithDefaultsAndOneErrorAlert() throws {
         application.launch()
-        let home = application.windows["Home Note"].textViews["note-editor"]
+        let home = application.windows["home"].textViews["note-editor"]
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         let defaultHeight = home.frame.height
         application.typeKey("q", modifierFlags: .command)
@@ -138,7 +138,7 @@ final class ConfigTests: XCTestCase {
         let original = "\u{FEFF}# Keep this comment\r\nselected-fonts = SF Mono\r\nactive-font = SF Mono\r\nfont-size = 20\r\n"
         try writeConfig(original)
         application.launch()
-        let home = application.windows["Home Note"].textViews["note-editor"]
+        let home = application.windows["home"].textViews["note-editor"]
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         let defaultHeight = home.frame.height
         application.typeKey("o", modifierFlags: .command)
@@ -176,7 +176,7 @@ final class ConfigTests: XCTestCase {
 
     func testLaunchLoadsConfigSizeAndPreservesZoomUntilResetToLatestDefault() throws {
         application.launch()
-        let home = application.windows["Home Note"].textViews["note-editor"]
+        let home = application.windows["home"].textViews["note-editor"]
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         let defaultHeight = home.frame.height
         application.typeKey("q", modifierFlags: .command)
@@ -204,7 +204,7 @@ final class ConfigTests: XCTestCase {
 
     func testOpenTreatsExtensionlessAndUnfamiliarExtensionsAsUTF8Notes() throws {
         application.launch()
-        XCTAssertTrue(application.windows["Home Note"].textViews["note-editor"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
         for name in ["extensionless", "Plain note.unfamiliar-spanreed"] {
             let url = testFolder.appendingPathComponent(name)
             let text = "Café 日本 in a note named " + name
@@ -226,7 +226,7 @@ final class ConfigTests: XCTestCase {
 
     func testConfigSaveAsCreatesAnOrdinaryNoteWithoutApplyingItsSettings() throws {
         application.launch()
-        let home = application.windows["Home Note"].textViews["note-editor"]
+        let home = application.windows["home"].textViews["note-editor"]
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         let defaultHeight = home.frame.height
         application.typeKey(",", modifierFlags: .command)

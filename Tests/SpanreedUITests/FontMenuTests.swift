@@ -31,7 +31,7 @@ final class FontMenuTests: XCTestCase {
         let expected = "\u{FEFF}# My Config\r\nselected-fonts = SF Mono, Menlo\r\n\r\nactive-font\t= Menlo  \r\nfont-size = 20\r\n"
         try writeConfig(original)
         application.launch()
-        let home = application.windows["Home Note"].textViews["note-editor"]
+        let home = application.windows["home"].textViews["note-editor"]
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         application.typeKey("=", modifierFlags: [.command, .shift])
         application.typeKey("=", modifierFlags: [.command, .shift])
@@ -55,7 +55,7 @@ final class FontMenuTests: XCTestCase {
         let unsavedComment = "# My unfinished Config edit\n"
         try writeConfig(original)
         application.launch()
-        let home = application.windows["Home Note"].textViews["note-editor"]
+        let home = application.windows["home"].textViews["note-editor"]
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         application.typeKey(",", modifierFlags: .command)
         let config = application.windows["Config"]
@@ -89,7 +89,7 @@ final class FontMenuTests: XCTestCase {
         let comment = "# An unsaved comment\n"
         try writeConfig(original)
         application.launch()
-        XCTAssertTrue(application.windows["Home Note"].textViews["note-editor"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
         application.typeKey(",", modifierFlags: .command)
         let config = application.windows["Config"]
         let editor = config.textViews["note-editor"]
@@ -120,7 +120,7 @@ final class FontMenuTests: XCTestCase {
         let unsavedText = "# Cafe\u{0301}\nselected-fonts = SF Mono, Menlo\nactive-font = SF Mono\n"
         try writeConfig(original)
         application.launch()
-        XCTAssertTrue(application.windows["Home Note"].textViews["note-editor"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
         application.typeKey(",", modifierFlags: .command)
         let config = application.windows["Config"]
         let editor = config.textViews["note-editor"]
@@ -147,7 +147,7 @@ final class FontMenuTests: XCTestCase {
         application.launch()
         XCTAssertTrue(application.dialogs.firstMatch.waitForExistence(timeout: 5))
         application.typeKey(.return, modifierFlags: [])
-        let home = application.windows["Home Note"].textViews["note-editor"]
+        let home = application.windows["home"].textViews["note-editor"]
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         openFormatFontMenu()
         let format = application.menuBars.menuBarItems["Format"]
@@ -171,7 +171,7 @@ final class FontMenuTests: XCTestCase {
 
     func testFontChoicesCreateMissingConfigAndAppendMissingActiveFont() throws {
         application.launch()
-        XCTAssertTrue(application.windows["Home Note"].textViews["note-editor"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.windows["home"].textViews["note-editor"].waitForExistence(timeout: 5))
         openFormatFontMenu()
         let format = application.menuBars.menuBarItems["Format"]
         XCTAssertEqual(format.menuItems.count, 2)

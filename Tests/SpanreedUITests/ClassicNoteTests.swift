@@ -25,7 +25,7 @@ final class ClassicNoteTests: XCTestCase {
 
     func testNewUntitledNotePromptsBeforeDiscardingText() throws {
         application.launch()
-        XCTAssertTrue(application.windows["Home Note"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.windows["home"].waitForExistence(timeout: 5))
         application.typeKey("n", modifierFlags: .command)
         let untitled = application.windows.matching(NSPredicate(format: "title BEGINSWITH %@", "Untitled")).firstMatch
         XCTAssertTrue(untitled.waitForExistence(timeout: 5))
@@ -113,7 +113,7 @@ final class ClassicNoteTests: XCTestCase {
         XCTAssertEqual(application.textViews.matching(identifier: "note-editor").count, 1)
         application.typeKey(.return, modifierFlags: [])
         XCTAssertEqual(application.windows.count, 1)
-        XCTAssertTrue(application.windows["Home Note"].exists)
+        XCTAssertTrue(application.windows["home"].exists)
         XCTAssertEqual(try Data(contentsOf: url), bytes)
     }
 

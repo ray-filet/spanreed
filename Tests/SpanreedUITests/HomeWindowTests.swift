@@ -30,19 +30,19 @@ final class HomeWindowTests: XCTestCase {
         XCTAssertEqual(application.windows.count, 0)
         XCTAssertEqual(application.state, .runningForeground)
         application.typeKey("1", modifierFlags: .command)
-        let homeWindow = application.windows["Home Note"]
+        let homeWindow = application.windows["home"]
         XCTAssertTrue(homeWindow.waitForExistence(timeout: 5))
         XCTAssertEqual(homeWindow.textViews["note-editor"].value as? String, "Bring back this Home Note")
         XCTAssertEqual(application.windows.count, 1)
         application.menuBars.menuBarItems["Window"].click()
-        XCTAssertTrue(application.menuItems["Home Note"].exists)
+        XCTAssertTrue(application.menuItems["home"].exists)
         application.typeKey(.escape, modifierFlags: [])
     }
 
     func testNotesAndConfigStayInSeparateWindowsWhenMacOSPrefersTabs() throws {
         application.launchArguments += ["-AppleWindowTabbingMode", "always"]
         application.launch()
-        XCTAssertTrue(application.windows["Home Note"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.windows["home"].waitForExistence(timeout: 5))
         application.typeKey("n", modifierFlags: .command)
         application.typeKey("n", modifierFlags: .command)
         application.typeKey(",", modifierFlags: .command)
@@ -65,8 +65,8 @@ final class HomeWindowTests: XCTestCase {
         application.typeKey("1", modifierFlags: .command)
         application.typeText(" is in front")
         XCTAssertEqual(application.windows.count, 2)
-        XCTAssertEqual(application.windows.matching(identifier: "Home Note").count, 1)
-        XCTAssertEqual(application.windows["Home Note"].textViews["note-editor"].value as? String, "Home text is in front")
+        XCTAssertEqual(application.windows.matching(identifier: "home").count, 1)
+        XCTAssertEqual(application.windows["home"].textViews["note-editor"].value as? String, "Home text is in front")
         XCTAssertEqual(try String(contentsOf: homeNoteURL, encoding: .utf8), "Home text is in front")
     }
 
@@ -91,7 +91,7 @@ final class HomeWindowTests: XCTestCase {
             XCTAssertEqual(XCTWaiter.wait(for: [visible], timeout: 5), .completed)
         }
         icon.click()
-        let homeWindow = application.windows["Home Note"]
+        let homeWindow = application.windows["home"]
         XCTAssertTrue(homeWindow.waitForExistence(timeout: 5))
         XCTAssertEqual(homeWindow.textViews["note-editor"].value as? String, "Dock reopening keeps this text")
         XCTAssertEqual(application.windows.count, 1)
@@ -99,7 +99,7 @@ final class HomeWindowTests: XCTestCase {
 
     func testHomeNoteWindowKeepsItsMovedAndResizedFrameAfterRelaunch() throws {
         application.launch()
-        let homeWindow = application.windows["Home Note"]
+        let homeWindow = application.windows["home"]
         XCTAssertTrue(homeWindow.waitForExistence(timeout: 5))
         moveWindow(homeWindow)
         let changedFrame = resizeWindow(homeWindow)
@@ -112,7 +112,7 @@ final class HomeWindowTests: XCTestCase {
 
     func testHomeNoteSaveAsWritesSnapshotAndKeepsAutosavingOriginal() throws {
         application.launch()
-        let homeWindow = application.windows["Home Note"]
+        let homeWindow = application.windows["home"]
         XCTAssertTrue(homeWindow.waitForExistence(timeout: 5))
         application.typeText("Saved snapshot")
         application.typeKey("s", modifierFlags: [.command, .shift])
@@ -133,13 +133,13 @@ final class HomeWindowTests: XCTestCase {
         application.typeText(" and more Home text")
         XCTAssertEqual(try String(contentsOf: homeNoteURL, encoding: .utf8), "Saved snapshot and more Home text")
         XCTAssertEqual(try String(contentsOf: copyURL, encoding: .utf8), "Saved snapshot")
-        XCTAssertEqual(application.windows["Home Note"].textViews["note-editor"].value as? String,
+        XCTAssertEqual(application.windows["home"].textViews["note-editor"].value as? String,
                        "Saved snapshot and more Home text")
     }
 
     func testSavingUntitledNoteAsHomeKeepsItsTextAndWindowFrameAfterRelaunch() throws {
         application.launch()
-        XCTAssertTrue(application.windows["Home Note"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.windows["home"].waitForExistence(timeout: 5))
         application.typeKey("w", modifierFlags: .command)
         application.typeKey("n", modifierFlags: .command)
         let untitled = application.windows.matching(NSPredicate(format: "title BEGINSWITH %@", "Untitled")).firstMatch
@@ -149,7 +149,7 @@ final class HomeWindowTests: XCTestCase {
         XCTAssertTrue(waitForFile(homeNoteURL, containing: "This becomes the Home Note"))
         application.typeKey("1", modifierFlags: .command)
         XCTAssertEqual(application.windows.count, 1)
-        let home = application.windows["Home Note"]
+        let home = application.windows["home"]
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         application.typeKey(.downArrow, modifierFlags: .command)
         application.typeText(" and keeps autosaving")
@@ -167,7 +167,7 @@ final class HomeWindowTests: XCTestCase {
 
     func testSavingConfigAsHomeKeepsConfigAndPersistsTheHomeWindowFrame() throws {
         application.launch()
-        XCTAssertTrue(application.windows["Home Note"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.windows["home"].waitForExistence(timeout: 5))
         application.typeKey("w", modifierFlags: .command)
         application.typeKey(",", modifierFlags: .command)
         let config = application.windows["Config"]
@@ -181,7 +181,7 @@ final class HomeWindowTests: XCTestCase {
         XCTAssertTrue(waitForFile(homeNoteURL, containing: expectedText))
         application.typeKey("1", modifierFlags: .command)
         XCTAssertEqual(application.windows.count, 1)
-        let home = application.windows["Home Note"]
+        let home = application.windows["home"]
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         application.typeKey(.downArrow, modifierFlags: .command)
         application.typeText(" and autosaves")
@@ -220,7 +220,7 @@ final class HomeWindowTests: XCTestCase {
         XCTAssertTrue(waitForFile(homeNoteURL, containing: "Opened again and autosaved"))
         application.typeKey("1", modifierFlags: .command)
         XCTAssertEqual(application.windows.count, 1)
-        XCTAssertTrue(application.windows["Home Note"].exists)
+        XCTAssertTrue(application.windows["home"].exists)
     }
 
     private func waitForFile(_ url: URL, containing text: String) -> Bool {
