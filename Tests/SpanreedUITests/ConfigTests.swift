@@ -67,7 +67,7 @@ final class ConfigTests: XCTestCase {
         let originalConfig = try String(contentsOf: configURL, encoding: .utf8)
         application.typeKey("a", modifierFlags: .command)
         let newConfig = "selected-fonts = SF Mono, Menlo\nactive-font = Menlo\nfont-size = 32\n"
-        paste(newConfig)
+        application.pasteText(newConfig)
         XCTAssertEqual(home.frame.height, defaultHeight, accuracy: 1)
         XCTAssertEqual(try String(contentsOf: configURL, encoding: .utf8), originalConfig)
         application.typeKey("s", modifierFlags: .command)
@@ -81,7 +81,7 @@ final class ConfigTests: XCTestCase {
         application.typeKey("n", modifierFlags: .command)
         let untitled = application.windows["Untitled"].textViews["note-editor"]
         XCTAssertTrue(untitled.waitForExistence(timeout: 5))
-        paste(noteText)
+        application.pasteText(noteText)
         XCTAssertEqual(untitled.frame.height, configuredHeight, accuracy: 1)
         let screenshot = XCTAttachment(screenshot: application.screenshot())
         screenshot.name = "Config applies Menlo at 32 points to all notes"
@@ -95,7 +95,7 @@ final class ConfigTests: XCTestCase {
         application.typeKey(",", modifierFlags: .command)
         XCTAssertTrue(application.windows["Config"].textViews["note-editor"].waitForExistence(timeout: 5))
         application.typeKey("a", modifierFlags: .command)
-        paste("font-size = invalid\nunknown = value\n")
+        application.pasteText("font-size = invalid\nunknown = value\n")
         application.typeKey("s", modifierFlags: .command)
         let alert = application.dialogs.firstMatch
         XCTAssertTrue(alert.waitForExistence(timeout: 5))
@@ -234,7 +234,7 @@ final class ConfigTests: XCTestCase {
         XCTAssertTrue(config.textViews["note-editor"].waitForExistence(timeout: 5))
         let originalConfig = try Data(contentsOf: configURL)
         application.typeKey("a", modifierFlags: .command)
-        paste("font-size = 32\n")
+        application.pasteText("font-size = 32\n")
         application.typeKey("s", modifierFlags: [.command, .shift])
         let savePanel = config.sheets.firstMatch
         XCTAssertTrue(savePanel.waitForExistence(timeout: 5))
@@ -263,23 +263,5 @@ final class ConfigTests: XCTestCase {
     private func writeConfig(_ text: String) throws {
         try FileManager.default.createDirectory(at: configURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data(text.utf8).write(to: configURL)
-    }
-
-    private func paste(_ text: String) {
-        let pasteboard = NSPasteboard.general
-        let previousItems = pasteboard.pasteboardItems?.map { original -> NSPasteboardItem in
-            let copy = NSPasteboardItem()
-            for type in original.types {
-                if let data = original.data(forType: type) { copy.setData(data, forType: type) }
-            }
-            return copy
-        } ?? []
-        defer {
-            pasteboard.clearContents()
-            pasteboard.writeObjects(previousItems)
-        }
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-        application.typeKey("v", modifierFlags: .command)
     }
 }

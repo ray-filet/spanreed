@@ -1,20 +1,20 @@
 import AppKit
 
-final class HomeNoteWindowController: NSWindowController, NSWindowDelegate {
+final class NoteWindowController: NSWindowController, NSWindowDelegate {
     private static let frameKey = "home-note-window-frame"
     private let defaults: UserDefaults
 
-    init(window: NSWindow, defaults: UserDefaults) {
+    init(window: NSWindow, defaults: UserDefaults, restoreHomeFrame: Bool) {
         self.defaults = defaults
         super.init(window: window)
-        if let savedFrame = defaults.string(forKey: Self.frameKey) {
+        if restoreHomeFrame, let savedFrame = defaults.string(forKey: Self.frameKey) {
             window.setFrame(from: savedFrame)
         }
         window.delegate = self
     }
 
     required init?(coder: NSCoder) {
-        fatalError("Home Note windows are created programmatically.")
+        fatalError("Note windows are created programmatically.")
     }
 
     func windowDidMove(_ notification: Notification) { saveFrame() }
@@ -22,7 +22,8 @@ final class HomeNoteWindowController: NSWindowController, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) { saveFrame() }
 
     private func saveFrame() {
-        guard let window else { return }
+        // Save As can turn an existing standard or Config window into the Home Note.
+        guard (document as? NoteDocument)?.kind == .home, let window else { return }
         defaults.set(window.frameDescriptor, forKey: Self.frameKey)
     }
 }

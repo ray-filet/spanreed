@@ -62,7 +62,7 @@ final class FontMenuTests: XCTestCase {
         let editor = config.textViews["note-editor"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         application.typeKey(.downArrow, modifierFlags: .command)
-        paste(unsavedComment)
+        application.pasteText(unsavedComment)
         application.typeKey("1", modifierFlags: .command)
         home.rightClick()
         let font = home.menuItems["Font"]
@@ -95,7 +95,7 @@ final class FontMenuTests: XCTestCase {
         let editor = config.textViews["note-editor"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         application.typeKey(.downArrow, modifierFlags: .command)
-        paste(comment)
+        application.pasteText(comment)
         openFormatFontMenu()
         application.menuBars.menuBarItems["Format"].menuItems["Menlo"].click()
         XCTAssertEqual(editor.value as? String, savedText + comment)
@@ -126,7 +126,7 @@ final class FontMenuTests: XCTestCase {
         let editor = config.textViews["note-editor"]
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         application.typeKey("a", modifierFlags: .command)
-        paste(unsavedText)
+        application.pasteText(unsavedText)
         openFormatFontMenu()
         application.menuBars.menuBarItems["Format"].menuItems["SF Mono"].click()
         XCTAssertEqual(Data((editor.value as? String ?? "").utf8), Data(unsavedText.utf8))
@@ -184,7 +184,7 @@ final class FontMenuTests: XCTestCase {
         XCTAssertTrue(editor.waitForExistence(timeout: 5))
         let text = "# Keep the Active Font at the end\nselected-fonts = SF Mono, Menlo\nfont-size = 20\n"
         application.typeKey("a", modifierFlags: .command)
-        paste(text)
+        application.pasteText(text)
         application.typeKey("s", modifierFlags: .command)
         assertConfigBytes(Data(text.utf8))
         openFormatFontMenu()
@@ -222,23 +222,5 @@ final class FontMenuTests: XCTestCase {
         }, object: nil)
         let result = XCTWaiter.wait(for: [saved], timeout: 5)
         XCTAssertEqual(result, .completed, application.debugDescription, file: file, line: line)
-    }
-
-    private func paste(_ text: String) {
-        let pasteboard = NSPasteboard.general
-        let previousItems = pasteboard.pasteboardItems?.map { original -> NSPasteboardItem in
-            let copy = NSPasteboardItem()
-            for type in original.types {
-                if let data = original.data(forType: type) { copy.setData(data, forType: type) }
-            }
-            return copy
-        } ?? []
-        defer {
-            pasteboard.clearContents()
-            pasteboard.writeObjects(previousItems)
-        }
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-        application.typeKey("v", modifierFlags: .command)
     }
 }

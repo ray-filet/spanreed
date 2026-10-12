@@ -45,6 +45,7 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
                               backing: .buffered, defer: false)
         window.minSize = NSSize(width: 360, height: 240)
         window.isRestorable = false
+        window.tabbingMode = .disallowed
         window.center()
         let scrollView = NSScrollView(frame: window.contentView!.bounds)
         scrollView.autoresizingMask = [.width, .height]
@@ -77,24 +78,25 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
         scrollView.documentView = textView
         window.contentView?.addSubview(scrollView)
         editor = textView
-        if kind == .home {
-            addWindowController(HomeNoteWindowController(window: window, defaults: AppPaths.current.defaults))
-        } else {
-            addWindowController(NSWindowController(window: window))
-        }
+        addWindowController(NoteWindowController(window: window, defaults: AppPaths.current.defaults,
+                                                 restoreHomeFrame: kind == .home))
         if kind == .home { window.title = "Home Note" }
         window.makeFirstResponder(textView)
     }
 
     override func read(from url: URL, ofType typeName: String) throws {
-        if url.standardizedFileURL == AppPaths.current.homeNoteURL.standardizedFileURL {
-            kind = .home
-        } else if url.standardizedFileURL == AppPaths.current.configURL.standardizedFileURL {
-            kind = .config
-        } else {
-            kind = .standard
-        }
+        kind = Self.kind(for: url)
         try super.read(from: url, ofType: typeName)
+    }
+
+    private static func kind(for url: URL) -> Kind {
+        if url.standardizedFileURL == AppPaths.current.homeNoteURL.standardizedFileURL {
+            return .home
+        } else if url.standardizedFileURL == AppPaths.current.configURL.standardizedFileURL {
+            return .config
+        } else {
+            return .standard
+        }
     }
 
     override func read(from data: Data, ofType typeName: String) throws {
@@ -110,20 +112,17 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
 
     override func save(to url: URL, ofType typeName: String, for saveOperation: NSDocument.SaveOperationType,
                        completionHandler: @escaping (Error?) -> Void) {
+        let destinationKind = Self.kind(for: url)
         super.save(to: url, ofType: typeName, for: saveOperation) { error in
             if error == nil, saveOperation != .saveToOperation {
-                if url.standardizedFileURL == AppPaths.current.configURL.standardizedFileURL {
-                    self.kind = .config
+                self.kind = destinationKind
+                if destinationKind == .config {
                     self.savedConfigText = (try? Configuration.shared.readText()) ?? self.text
                     self.synchronizeConfigChangeCount()
-                } else if url.standardizedFileURL == AppPaths.current.homeNoteURL.standardizedFileURL {
-                    self.kind = .home
-                } else {
-                    self.kind = .standard
                 }
             }
             completionHandler(error)
-            if error == nil, url.standardizedFileURL == AppPaths.current.configURL.standardizedFileURL {
+            if error == nil, destinationKind == .config {
                 Configuration.shared.reloadAndPresentErrors()
             }
         }

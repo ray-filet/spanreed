@@ -20,19 +20,12 @@ public enum Config {
     public static func rewriteActiveFont(_ text: String, fontName: String) -> String {
         var replacementRange: Range<String.Index>?
         var invalidValueRange: Range<String.Index>?
-        for rawLine in text.split(omittingEmptySubsequences: false, whereSeparator: { $0.isNewline }) {
-            let line = rawLine.startIndex == text.startIndex && rawLine.hasPrefix("\u{FEFF}")
-                ? rawLine.dropFirst() : rawLine
-            guard let separator = line.firstIndex(of: "="),
-                  line[..<separator].trimmingCharacters(in: .whitespaces) == "active-font" else { continue }
-            let value = line[line.index(after: separator)...]
-            let trimmedValue = value.trimmingCharacters(in: .whitespaces)
-            let start = value.rangeOfCharacter(from: .whitespaces.inverted)?.lowerBound ?? value.endIndex
-            let end = value.rangeOfCharacter(from: .whitespaces.inverted, options: .backwards)?.upperBound ?? value.endIndex
-            if !trimmedValue.isEmpty, !trimmedValue.contains("=") {
-                replacementRange = start..<end
+        for line in scanLines(text) where line.key == "active-font" {
+            let range = line.value.startIndex..<line.value.endIndex
+            if isValidActiveFont(line.value) {
+                replacementRange = range
             } else {
-                invalidValueRange = start..<end
+                invalidValueRange = range
             }
         }
         if let replacementRange = replacementRange ?? invalidValueRange {
@@ -61,24 +54,20 @@ public enum Config {
         var config = ResolvedConfig()
         var selectedFontsLine = 1
         var activeFontLine: Int?
-        let configText = text.hasPrefix("\u{FEFF}") ? String(text.dropFirst()) : text
-        for (index, rawLine) in configText.split(omittingEmptySubsequences: false, whereSeparator: { $0.isNewline }).enumerated() {
-            let line = rawLine.trimmingCharacters(in: .whitespaces)
-            if line.isEmpty || line.hasPrefix("#") { continue }
+        for line in scanLines(text) {
             func report(_ message: String) {
-                config.errors.append(ConfigError(lineNumber: index + 1, message: message))
+                config.errors.append(ConfigError(lineNumber: line.number, message: message))
             }
-            guard let separator = line.firstIndex(of: "=") else {
+            guard let key = line.key else {
                 report("Expected key = value.")
                 continue
             }
-            let key = line[..<separator].trimmingCharacters(in: .whitespaces)
-            let value = line[line.index(after: separator)...].trimmingCharacters(in: .whitespaces)
+            let value = line.value
             switch key {
             case "selected-fonts":
                 if value.isEmpty {
                     config.selectedFonts = ["SF Mono"]
-                    selectedFontsLine = index + 1
+                    selectedFontsLine = line.number
                     continue
                 }
                 let fonts = value.split(separator: ",", omittingEmptySubsequences: false)
@@ -88,14 +77,14 @@ public enum Config {
                     continue
                 }
                 config.selectedFonts = fonts
-                selectedFontsLine = index + 1
+                selectedFontsLine = line.number
             case "active-font":
-                guard !value.isEmpty, !value.contains("=") else {
+                guard isValidActiveFont(value) else {
                     report("active-font must be a font name.")
                     continue
                 }
-                config.activeFont = value
-                activeFontLine = index + 1
+                config.activeFont = String(value)
+                activeFontLine = line.number
             case "font-size":
                 guard let size = Double(value), size.isFinite, size > 0 else {
                     report("font-size must be a positive, finite number.")
@@ -120,5 +109,33 @@ public enum Config {
         }
         config.errors.sort { $0.lineNumber < $1.lineNumber }
         return config
+    }
+
+    private struct ScannedLine {
+        let number: Int
+        let key: String?
+        // The slice retains indices into the original text for byte-preserving rewrites.
+        let value: Substring
+    }
+
+    private static func scanLines(_ text: String) -> [ScannedLine] {
+        text.split(omittingEmptySubsequences: false, whereSeparator: { $0.isNewline })
+            .enumerated().compactMap { index, rawLine in
+                let line = index == 0 && rawLine.hasPrefix("\u{FEFF}") ? rawLine.dropFirst() : rawLine
+                let content = line.trimmingCharacters(in: .whitespaces)
+                guard !content.isEmpty, !content.hasPrefix("#") else { return nil }
+                guard let separator = line.firstIndex(of: "=") else {
+                    return ScannedLine(number: index + 1, key: nil, value: line[line.endIndex...])
+                }
+                let key = line[..<separator].trimmingCharacters(in: .whitespaces)
+                let value = line[line.index(after: separator)...]
+                let start = value.rangeOfCharacter(from: .whitespaces.inverted)?.lowerBound ?? value.endIndex
+                let end = value.rangeOfCharacter(from: .whitespaces.inverted, options: .backwards)?.upperBound ?? value.endIndex
+                return ScannedLine(number: index + 1, key: key, value: value[start..<end])
+            }
+    }
+
+    private static func isValidActiveFont(_ value: Substring) -> Bool {
+        !value.isEmpty && !value.contains("=")
     }
 }
