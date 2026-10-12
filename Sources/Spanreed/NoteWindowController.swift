@@ -17,6 +17,11 @@ final class NoteWindowController: NSWindowController, NSWindowDelegate {
         fatalError("Note windows are created programmatically.")
     }
 
+    override func synchronizeWindowTitleWithDocumentName() {
+        super.synchronizeWindowTitleWithDocumentName()
+        window?.standardWindowButton(.documentIconButton)?.isHidden = true
+    }
+
     func windowDidMove(_ notification: Notification) { saveFrame() }
     func windowDidResize(_ notification: Notification) { saveFrame() }
     func windowWillClose(_ notification: Notification) { saveFrame() }
