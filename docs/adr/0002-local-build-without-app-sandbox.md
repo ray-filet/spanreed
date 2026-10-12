@@ -1,0 +1,3 @@
+# Run the local build without App Sandbox
+
+Spanreed must create and autosave the Home Note at `~/Documents/Spanreed/Home.txt` and edit the Config at `~/.config/spanreed/config` without a folder chooser at launch. Ticket #2 authorizes disabling App Sandbox for this local-only build, so we use that option rather than temporary file-access exceptions or a bookmark permission flow; macOS privacy permissions still apply. A future sandboxed distribution must revisit access to both locations before enabling the sandbox, because container-relative home paths would change where existing notes and Config files are found.
