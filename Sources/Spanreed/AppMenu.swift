@@ -7,6 +7,9 @@ struct AppMenu {
         let app = submenu("Spanreed", in: bar)
         app.addItem(withTitle: "About Spanreed", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         app.addItem(.separator())
+        let config = app.addItem(withTitle: "Open Config…", action: #selector(NoteDocumentController.openConfig(_:)), keyEquivalent: ",")
+        config.target = NSDocumentController.shared
+        app.addItem(.separator())
         app.addItem(withTitle: "Hide Spanreed", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         app.addItem(.separator())
         app.addItem(withTitle: "Quit Spanreed", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")

@@ -8,7 +8,13 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
     private(set) var editor: NSTextView?
 
     override var displayName: String! {
-        get { kind == .home ? "Home Note" : super.displayName }
+        get {
+            switch kind {
+            case .home: return "Home Note"
+            case .config: return "Config"
+            case .standard: return super.displayName
+            }
+        }
         set { super.displayName = newValue }
     }
 
@@ -78,6 +84,10 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
     override func read(from url: URL, ofType typeName: String) throws {
         if url.standardizedFileURL == AppPaths.current.homeNoteURL.standardizedFileURL {
             kind = .home
+        } else if url.standardizedFileURL == AppPaths.current.configURL.standardizedFileURL {
+            kind = .config
+        } else {
+            kind = .standard
         }
         try super.read(from: url, ofType: typeName)
     }
@@ -87,12 +97,51 @@ class NoteDocument: NSDocument, NSTextViewDelegate {
             throw NSError(domain: NSCocoaErrorDomain, code: NSFileReadInapplicableStringEncodingError,
                           userInfo: [NSLocalizedDescriptionKey: "This note is not valid UTF-8 text."])
         }
-        text = decoded
-        editor?.string = decoded
+        // Validate strictly, but retain the Config BOM and line endings for font rewrites.
+        text = kind == .config ? String(decoding: data, as: UTF8.self) : decoded
+        editor?.string = text
+    }
+
+    override func save(to url: URL, ofType typeName: String, for saveOperation: NSDocument.SaveOperationType,
+                       completionHandler: @escaping (Error?) -> Void) {
+        super.save(to: url, ofType: typeName, for: saveOperation) { error in
+            if error == nil, saveOperation != .saveToOperation {
+                if url.standardizedFileURL == AppPaths.current.configURL.standardizedFileURL {
+                    self.kind = .config
+                } else if url.standardizedFileURL == AppPaths.current.homeNoteURL.standardizedFileURL {
+                    self.kind = .home
+                } else {
+                    self.kind = .standard
+                }
+            }
+            completionHandler(error)
+            if error == nil, url.standardizedFileURL == AppPaths.current.configURL.standardizedFileURL {
+                Configuration.shared.reloadAndPresentErrors()
+            }
+        }
     }
 
     override func data(ofType typeName: String) throws -> Data {
         Data(text.utf8)
+    }
+
+    /// A font-menu rewrite updates this note independently of the disk Config,
+    /// so other unsaved edits stay here until the user saves them.
+    func replaceConfigText(_ updatedText: String, savedText: String) {
+        guard kind == .config else { return }
+        let selection = editor?.selectedRange()
+        text = updatedText
+        editor?.string = updatedText
+        if let selection {
+            let length = (updatedText as NSString).length
+            let location = min(selection.location, length)
+            editor?.setSelectedRange(NSRange(location: location, length: min(selection.length, length - location)))
+        }
+        if updatedText == savedText {
+            updateChangeCount(.changeCleared)
+        } else if !isDocumentEdited {
+            updateChangeCount(.changeDone)
+        }
     }
 
     func textDidChange(_ notification: Notification) {
