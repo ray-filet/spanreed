@@ -150,6 +150,50 @@ final class ClassicNoteTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: original, encoding: .utf8), "Original location")
     }
 
+    func testQuitPromptsForDirtyClassicNoteAndRelaunchShowsOnlyHomeNote() throws {
+        let url = testFolder.appendingPathComponent("Quit note.txt")
+        try "A saved classic note".write(to: url, atomically: true, encoding: .utf8)
+        application.launch()
+        XCTAssertTrue(application.textViews["note-editor"].waitForExistence(timeout: 5))
+        application.typeText("The Home Note survives quitting")
+        try openNote(url)
+        let note = application.windows[url.lastPathComponent]
+        application.typeKey(.downArrow, modifierFlags: .command)
+        application.typeText("\nAn unsaved edit")
+        application.typeKey("q", modifierFlags: .command)
+        let save = note.sheets.buttons["Save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5))
+        XCTAssertEqual(application.sheets.count, 1)
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), "A saved classic note")
+        attachScreenshot(named: "Quit prompt for the classic note")
+        save.click()
+        XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), "A saved classic note\nAn unsaved edit")
+        XCTAssertEqual(try String(contentsOf: testFolder.appendingPathComponent("Home/Home.txt"), encoding: .utf8),
+                       "The Home Note survives quitting")
+        application.launch()
+        let editor = application.textViews["note-editor"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        XCTAssertEqual(application.windows.count, 1)
+        XCTAssertEqual(editor.value as? String, "The Home Note survives quitting")
+    }
+
+    func testUndoToSavedContentsClearsUnsavedChanges() throws {
+        let url = testFolder.appendingPathComponent("Undo note.txt")
+        try "Clean contents".write(to: url, atomically: true, encoding: .utf8)
+        application.launch()
+        try openNote(url)
+        let note = application.windows[url.lastPathComponent]
+        application.typeKey(.downArrow, modifierFlags: .command)
+        application.typeText(" plus unsaved text")
+        application.typeKey("z", modifierFlags: .command)
+        XCTAssertEqual(note.textViews["note-editor"].value as? String, "Clean contents")
+        application.typeKey("w", modifierFlags: .command)
+        XCTAssertFalse(note.exists)
+        XCTAssertFalse(application.sheets.firstMatch.exists)
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), "Clean contents")
+    }
+
     private func attachScreenshot(named name: String) {
         let screenshot = XCTAttachment(screenshot: application.screenshot())
         screenshot.name = name
