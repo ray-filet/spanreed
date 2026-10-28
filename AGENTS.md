@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-GitHub Issues on `ray-filet/spanreed` (private), via the `gh` CLI. Read `docs/agents/issue-tracker.md` before creating or relating issues; its publication contract governs tracker writes.
+GitHub Issues on `ray-filet/spanreed`, via the `gh` CLI. Read `docs/agents/issue-tracker.md` before creating or relating issues; its publication contract governs tracker writes.
 
 ### Triage labels
 
