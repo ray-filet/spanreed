@@ -89,6 +89,10 @@ Spanreed.app/Contents/MacOS/Spanreed --home-note-folder /tmp/spanreed-home --con
 
 The equivalent environment variables are `SPANREED_HOME_NOTE_FOLDER` and `SPANREED_CONFIG_FOLDER`. Arguments take precedence. `SPANREED_DEFAULTS_SUITE` chooses a separate UserDefaults suite for isolated runs.
 
+## License
+
+[MIT](LICENSE), covering the code and the app icon.
+
 ---
 
 Created in [T3 Code](https://t3.codes).
