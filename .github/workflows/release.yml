@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Sources/**
+      - SupportingFiles/**
+      - Spanreed.xcodeproj/**
+      - scripts/check-app-launch.py
+      - .github/workflows/release.yml
+  pull_request:
+    paths:
+      - Sources/**
+      - SupportingFiles/**
+      - Spanreed.xcodeproj/**
+      - scripts/check-app-launch.py
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      APP: .build/release/Build/Products/Release/Spanreed.app
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: |
+          xcodebuild -version
+          xcodebuild build -project Spanreed.xcodeproj -scheme Spanreed -configuration Release \
+            -destination 'platform=macOS' -derivedDataPath .build/release -quiet
+
+      - name: Check universal binary
+        run: |
+          for arch in arm64 x86_64; do
+            lipo "$APP/Contents/MacOS/Spanreed" -verify_arch "$arch"
+          done
+
+      - name: Check standalone launch
+        run: python3 scripts/check-app-launch.py "$APP"
+
+      # ditto keeps the symlinks inside SpanreedCore.framework, which zip -r
+      # would replace with copies.
+      - name: Zip
+        run: ditto -c -k --keepParent "$APP" Spanreed.zip
+
+      - if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v7
+        with:
+          path: Spanreed.zip
+          archive: false
+          retention-days: 7
+
+      # Each build gets a new tag instead of moving one, because GITHUB_TOKEN
+      # may be refused a tag move that spans a workflow-file change.
+      - name: Publish Latest build release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: build-${{ github.run_number }}-${{ github.run_attempt }}
+        run: |
+          latest=$(gh release list --json tagName,isLatest --jq '.[] | select(.isLatest) | .tagName')
+          if [ -n "$latest" ]; then
+            status=$(gh api "repos/$GH_REPO/compare/$GITHUB_SHA...$latest" --jq .status)
+            if [ "$status" = ahead ]; then
+              echo "::notice::Not publishing $GITHUB_SHA because $latest is a newer build."
+              exit 0
+            fi
+          fi
+          gh release create "$TAG" Spanreed.zip --target "$GITHUB_SHA" --latest \
+            --title "Latest build" --notes "Universal Spanreed.app built from $GITHUB_SHA."
+          old=$(gh release list --json tagName --jq ".[].tagName | select(startswith(\"build-\") and . != \"$TAG\")")
+          for tag in $old; do
+            gh release delete "$tag" --cleanup-tag --yes
+          done

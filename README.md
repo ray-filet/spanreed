@@ -25,6 +25,21 @@ The launch check copies the app to a temporary folder and runs it without Xcode'
 
 `SpanreedCore` is a pure Swift framework. Its public Config and indentation behavior is tested in `Tests/SpanreedCoreTests`. App behavior is tested through XCUITest in `Tests/SpanreedUITests`; these tests always launch with temporary Home Note and Config folders.
 
+## Install without Xcode
+
+GitHub Actions builds the Release app on every push to `main` that changes the app, and publishes it as the **Latest build** release.
+
+1. Download [Spanreed.zip](https://github.com/ray-filet/spanreed/releases/latest/download/Spanreed.zip). Sign in to GitHub first, because the repository is private.
+2. Unzip it and move `Spanreed.app` to `/Applications`, or to `~/Applications` without admin rights.
+3. Clear the download quarantine. The app is signed locally, not with a Developer ID, so Gatekeeper blocks it otherwise. Run the line that matches the folder you chose in step 2:
+
+   ```sh
+   xattr -dr com.apple.quarantine /Applications/Spanreed.app
+   xattr -dr com.apple.quarantine ~/Applications/Spanreed.app
+   ```
+
+The app runs on Apple silicon and Intel Macs with macOS 13 or later. To build on demand, run the **Release** workflow from the repository's Actions tab.
+
 ## Config and text size
 
 Spanreed creates `~/.config/spanreed/config` on launch and writes every supported setting, including defaults. Existing Config files gain any missing settings on launch or save; comments, explicit values, and line endings are preserved. Open Config with **Command-,** and save to apply edits.
