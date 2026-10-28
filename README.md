@@ -30,12 +30,13 @@ The launch check copies the app to a temporary folder and runs it without Xcode'
 GitHub Actions builds the Release app on every push to `main` that changes the app, and publishes it as the **Latest build** release.
 
 1. Download [Spanreed.zip](https://github.com/ray-filet/spanreed/releases/latest/download/Spanreed.zip). Sign in to GitHub first, because the repository is private.
-2. Unzip it and move `Spanreed.app` to `/Applications`, or to `~/Applications` without admin rights.
-3. Clear the download quarantine. The app is signed locally, not with a Developer ID, so Gatekeeper blocks it otherwise. Run the line that matches the folder you chose in step 2:
+2. Unzip it in `~/Downloads`, if your browser has not already.
+3. Move the app to `/Applications`, replacing any previous copy, and clear the download quarantine. The app is signed locally, not with a Developer ID, so Gatekeeper blocks it otherwise:
 
    ```sh
+   rm -rf /Applications/Spanreed.app
+   mv ~/Downloads/Spanreed.app /Applications/
    xattr -dr com.apple.quarantine /Applications/Spanreed.app
-   xattr -dr com.apple.quarantine ~/Applications/Spanreed.app
    ```
 
 The app runs on Apple silicon and Intel Macs with macOS 13 or later. To build on demand, run the **Release** workflow from the repository's Actions tab.
