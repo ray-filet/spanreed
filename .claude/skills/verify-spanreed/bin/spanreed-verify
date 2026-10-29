@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+# Launches, checks, drives, and tears down isolated Spanreed instances for verification.
+#
+#   spanreed-verify launch <run-id> [--home-text <file>] [--config <file>]
+#   spanreed-verify doctor <run-id>
+#   spanreed-verify drive <run-id> <journey.js>
+#   spanreed-verify snap <run-id> <name>
+#   spanreed-verify relaunch <run-id>
+#   spanreed-verify cleanup <run-id>
+#   spanreed-verify list
+set -euo pipefail
+
+skill_dir="$(cd "$(dirname "$0")/.." && pwd)"
+repo_root="$(git -C "$skill_dir" rev-parse --show-toplevel)"
+verify_root="$repo_root/.build/verify"
+built_app="$verify_root/DerivedData/Build/Products/Debug/Spanreed.app"
+probe="$verify_root/bin/window-probe"
+lsregister=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+recents="$HOME/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.ApplicationRecentDocuments"
+
+die() { echo "spanreed-verify: $*" >&2; exit 1; }
+
+use_run() {
+  [[ "${1:-}" =~ ^[a-z0-9][a-z0-9-]{0,39}$ ]] || die "run id must be lowercase letters, digits, and hyphens; got '${1:-}'"
+  run_id="$1"
+  run_dir="$verify_root/runs/$run_id"
+  evidence_dir="$verify_root/evidence/$run_id"
+  app="$run_dir/Spanreed.app"
+  executable="$app/Contents/MacOS/Spanreed"
+  # A per-run bundle id keeps ocu, Open Recent, and standard UserDefaults apart from every other Spanreed.
+  bundle="com.rayfilet.Spanreed.verify.$run_id"
+  # UserDefaults ignores a suite named after the app's own bundle id, so the suite gets a suffix.
+  suite="$bundle.defaults"
+}
+
+# Prints the run's pid only while that pid is still this run's app copy.
+pid_of_run() {
+  [[ -f "$run_dir/pid" ]] || return 1
+  local pid
+  pid="$(cat "$run_dir/pid")"
+  [[ "$(ps -o command= -p "$pid" 2>/dev/null)" == "$executable "* ]] || return 1
+  echo "$pid"
+}
+
+build_hash() {
+  (cd "$1/Contents" && find MacOS Frameworks -type f -print0 | sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -d' ' -f1)
+}
+
+build() {
+  mkdir -p "$verify_root/bin"
+  echo "building Debug app into $verify_root/DerivedData"
+  if ! (cd "$repo_root" && xcodebuild build -project Spanreed.xcodeproj -scheme Spanreed -configuration Debug \
+      -destination 'platform=macOS' -derivedDataPath "$verify_root/DerivedData" -quiet) >"$verify_root/build.log" 2>&1; then
+    tail -30 "$verify_root/build.log" >&2
+    die "build failed; full log at $verify_root/build.log"
+  fi
+  if [[ ! -x "$probe" || "$skill_dir/bin/window-probe.swift" -nt "$probe" ]]; then
+    swiftc -O "$skill_dir/bin/window-probe.swift" -o "$probe" || die "window-probe failed to compile"
+  fi
+}
+
+start_app() {
+  echo "starting Spanreed; it activates itself and takes keyboard focus once"
+  SPANREED_DEFAULTS_SUITE="$suite" nohup "$executable" \
+    --home-note-folder "$run_dir/home" --config-folder "$run_dir/config" >>"$run_dir/app.log" 2>&1 &
+  local pid=$!
+  disown "$pid" 2>/dev/null || true
+  echo "$pid" >"$run_dir/pid"
+  local deadline=$((SECONDS + 15))
+  until [[ -f "$run_dir/home/Home.txt" && -f "$run_dir/config/config" ]] \
+      && "$probe" "$pid" | grep -Eq '^window [0-9]+ [01] home$'; do
+    kill -0 "$pid" 2>/dev/null || { cat "$run_dir/app.log" >&2; die "Spanreed exited during launch"; }
+    ((SECONDS < deadline)) || die "no 'home' window after 15 s (pid $pid, log $run_dir/app.log; window-probe prints empty titles when this host lacks Screen Recording)"
+    sleep 0.2
+  done
+  sleep 1
+  kill -0 "$pid" 2>/dev/null || { cat "$run_dir/app.log" >&2; die "Spanreed exited right after launch"; }
+  echo "READY run=$run_id pid=$pid bundle=$bundle"
+  echo "  home note: $run_dir/home/Home.txt"
+  echo "  config:    $run_dir/config/config"
+  echo "  files:     $run_dir/files/"
+  echo "  evidence:  $evidence_dir/"
+}
+
+cmd_launch() {
+  use_run "${1:-}"
+  shift
+  local home_text="" config=""
+  while (($#)); do
+    case "$1" in
+      --home-text) home_text="$2"; shift 2 ;;
+      --config) config="$2"; shift 2 ;;
+      *) die "unknown launch option $1" ;;
+    esac
+  done
+  [[ ! -e "$run_dir" ]] || die "run $run_id already exists; use relaunch, or cleanup first"
+  build
+  mkdir -p "$run_dir/home" "$run_dir/config" "$run_dir/files" "$evidence_dir"
+  [[ -z "$home_text" ]] || cp "$home_text" "$run_dir/home/Home.txt"
+  [[ -z "$config" ]] || cp "$config" "$run_dir/config/config"
+  ditto "$built_app" "$app"
+  plutil -replace CFBundleIdentifier -string "$bundle" "$app/Contents/Info.plist"
+  codesign --force --sign - "$app" 2>/dev/null
+  {
+    echo "git_rev=$(git -C "$repo_root" rev-parse --short HEAD)"
+    echo "git_changed_paths=$(git -C "$repo_root" status --porcelain | wc -l | tr -d ' ')"
+    echo "build_hash=$(build_hash "$built_app")"
+    echo "launched_at=$(date -u +%FT%TZ)"
+  } >"$run_dir/meta"
+  cp "$run_dir/meta" "$evidence_dir/build.meta"
+  start_app
+}
+
+cmd_relaunch() {
+  use_run "${1:-}"
+  [[ -d "$run_dir" ]] || die "no run $run_id; use launch"
+  local pid
+  if pid="$(pid_of_run)"; then die "run $run_id is still running as pid $pid; quit it first"; fi
+  start_app
+}
+
+cmd_doctor() {
+  use_run "${1:-}"
+  local failed=0 pid="" probe_out first perms others
+  ok() { echo "PASS $*"; }
+  bad() { echo "FAIL $*"; failed=1; }
+  note() { echo "NOTE $*"; }
+
+  [[ -d "$run_dir" ]] || { bad "no run dir $run_dir; launch it first"; return 1; }
+  if pid="$(pid_of_run)"; then
+    ok "pid $pid is this run's app copy"
+    [[ "$(ps -o command= -p "$pid")" == *"--home-note-folder $run_dir/home --config-folder $run_dir/config"* ]] \
+      && ok "Home Note and Config folders are inside the run" || bad "launch arguments do not point at $run_dir"
+  else
+    pid=""
+    bad "no live Spanreed for run $run_id (pid file: $(cat "$run_dir/pid" 2>/dev/null || echo none)); relaunch it"
+  fi
+  [[ "$(plutil -extract CFBundleIdentifier raw "$app/Contents/Info.plist")" == "$bundle" ]] \
+    && ok "bundle id $bundle" || bad "app copy's bundle id is not $bundle"
+  if [[ "$(sed -n 's/^build_hash=//p' "$run_dir/meta")" == "$(build_hash "$built_app")" ]]; then
+    ok "running the current Debug build (launched from rev $(sed -n 's/^git_rev=//p' "$run_dir/meta"))"
+  else
+    note "DerivedData holds a newer build than this run; launch a new run to verify current code"
+  fi
+  probe_out="$("$probe" "${pid:-0}")"
+  [[ "$probe_out" == "locked 0"* ]] && ok "screen unlocked" \
+    || bad "screen is locked; ocu cannot read any window until someone unlocks this Mac"
+  echo "$probe_out" | grep -Eq '^window [0-9]+ 1 home$' && ok "Home Note window is on screen" \
+    || note "no on-screen 'home' window; ocu activates Spanreed on its next read"
+  perms="$(ocu doctor 2>&1 | tail -1 || true)"
+  [[ "$perms" == *"accessibility=granted, screenRecording=granted"* ]] && ok "ocu permissions granted" \
+    || bad "ocu permissions: $perms (the user grants them once through 'ocu doctor')"
+  if ((failed == 0)); then
+    first="$(ocu snapshot "$bundle" 2>&1 | head -1 || true)"
+    [[ "$first" == "App=$bundle"* ]] && ok "ocu reads the instance: $first" || bad "ocu snapshot failed: $first"
+  fi
+  others="$(pgrep -x Spanreed | grep -vx "${pid:-none}" | tr '\n' ' ' || true)"
+  [[ -z "$others" ]] || note "other Spanreed processes are not this run; leave them alone: $others"
+  return "$failed"
+}
+
+cmd_drive() {
+  use_run "${1:-}"
+  local journey="${2:-}" name script pid status=0
+  [[ -f "$journey" ]] || die "journey file '$journey' not found"
+  if ! cmd_doctor "$run_id" >"$run_dir/doctor.log"; then
+    cat "$run_dir/doctor.log"
+    die "doctor failed; not driving run $run_id"
+  fi
+  name="$(basename "$journey" .js)"
+  script="$run_dir/drive-$name.js"
+  pid="$(pid_of_run)"
+  {
+    printf 'const SPANREED = %s;\n' "$(jq -c -n --arg run "$run_id" --argjson pid "$pid" --arg bundle "$bundle" \
+      --arg home "$run_dir/home" --arg config "$run_dir/config" --arg files "$run_dir/files" \
+      --arg evidence "$evidence_dir" --arg journey "$name" '$ARGS.named')"
+    cat "$skill_dir/bin/prelude.js" "$journey"
+  } >"$script"
+  cp "$journey" "$evidence_dir/$name.journey.js"
+  ocu js --timeout 300000 --file "$script" >"$evidence_dir/$name.ocu.log" 2>&1 || status=$?
+  ocu turn-ended >/dev/null 2>&1 || true
+  grep -E "PASS|act: |snap: |Error" "$evidence_dir/$name.ocu.log" || true
+  echo "drive $name exit=$status (full output: $evidence_dir/$name.ocu.log)"
+  return "$status"
+}
+
+cmd_snap() {
+  use_run "${1:-}"
+  [[ -n "${2:-}" ]] || die "usage: spanreed-verify snap <run-id> <name>"
+  [[ -d "$run_dir" ]] || die "no run $run_id; launch it first"
+  local journey="$run_dir/snap-$2.js"
+  printf 'await snap(%s);\n' "$(jq -n --arg name "$2" '$name')" >"$journey"
+  cmd_drive "$run_id" "$journey"
+}
+
+cmd_cleanup() {
+  use_run "${1:-}"
+  local pid
+  if pid="$(pid_of_run)"; then
+    kill "$pid"
+    for _ in {1..25}; do kill -0 "$pid" 2>/dev/null || break; sleep 0.2; done
+    if kill -0 "$pid" 2>/dev/null; then kill -9 "$pid"; fi
+    echo "stopped pid $pid"
+  fi
+  defaults delete "$suite" >/dev/null 2>&1 || true
+  defaults delete "$bundle" >/dev/null 2>&1 || true
+  rm -f "$HOME/Library/Preferences/$suite.plist" "$HOME/Library/Preferences/$bundle.plist"
+  rm -f "$recents/$(echo "$bundle" | tr '[:upper:]' '[:lower:]')".sfl*
+  if [[ -d "$app" ]]; then "$lsregister" -u "$app" 2>/dev/null || true; fi
+  rm -rf "$run_dir"
+  echo "cleaned run $run_id; evidence kept at $evidence_dir/"
+  if [[ -d "$evidence_dir" ]]; then ls -1 "$evidence_dir" | sed 's/^/  /'; fi
+}
+
+cmd_list() {
+  local dir pid
+  for dir in "$verify_root"/runs/*/; do
+    [[ -d "$dir" ]] || continue
+    use_run "$(basename "$dir")"
+    if pid="$(pid_of_run)"; then echo "$run_id running pid=$pid"; else echo "$run_id stopped"; fi
+  done
+}
+
+case "${1:-}" in
+  launch | relaunch | doctor | drive | snap | cleanup | list) command="$1"; shift; "cmd_$command" "$@" ;;
+  *) sed -n '2,10p' "$0"; exit 2 ;;
+esac
